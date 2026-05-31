@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Pro — The Ultimate Exam Security Suite</title>
+    <meta name="description"
+        content="Secure Pro is a high-performance exam security suite built for institutions. Download for Windows & Mac today." />
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+</head>
+
+<body>
+
+    <!-- Entry Screen -->
+    <div id="entry-screen">
+        <div class="logo-container">
+            <svg class="main-shield" viewBox="0 0 24 24" fill="none" stroke="url(#gradient)" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <defs>
+                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#06b6d4" />
+                        <stop offset="100%" stop-color="#7c3aed" />
+                    </linearGradient>
+                </defs>
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            <div class="logo-text" id="main-logo-text">Secure<span>Pro</span></div>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard">
+        <!-- Tech background replacing silk/fashion background -->
+        <div class="tech-background"></div>
+        <div class="tech-overlay"></div>
+        <div class="glow-orb"></div>
+
+        <header id="main-header" aria-label="Site header">
+            <div class="header-logo" id="header-logo">
+                <svg class="header-shield" viewBox="0 0 24 24" fill="none" stroke="url(#gradient)" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                <div class="logo-text-small">Secure<span>Pro</span></div>
+            </div>
+
+            <nav class="header-nav" aria-label="Primary navigation">
+                <a href="#features">Features</a>
+                <a href="#download">Download</a>
+                <a href="#" target="_blank" rel="noopener">Docs</a>
+                <a href="#download" class="nav-cta cta-btn">Get Started</a>
+            </nav>
+        </header>
+
+        <main>
+            <!-- Hero Section -->
+            <section class="hero-main" id="hero" aria-label="Hero section">
+
+                <!-- Morphic Fluid Blobs -->
+                <div class="morphic-blobs-container">
+                    <div class="blob blob-1"></div>
+                    <div class="blob blob-2"></div>
+                </div>
+
+                <h1 class="oakun-text" id="logo-text" aria-label="Secure Pro">Secure<span>Pro</span></h1>
+                <div class="hero-tagline-block" id="hero-content" aria-live="polite">
+                    <p class="hero-tagline">
+                        Exam security,<br /><span>reimagined from scratch.</span>
+                    </p>
+                    <p class="hero-description hero-description-premium">
+                        Secure Pro is an enterprise-grade proctoring suite — real-time AI monitoring,
+                        tamper-proof kiosk mode, and instant compliance reports, all in one package.
+                    </p>
+                    <a href="#download" class="hero-cta-btn" id="hero-cta">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                            aria-hidden="true">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        Download Now
+                    </a>
+                </div>
+                <div class="scroll-hint" id="scroll-hint" aria-hidden="true">
+                    <p>Scroll</p>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                </div>
+            </section>
+
+            <!-- Features Section -->
+            <section id="features" class="content-section" aria-label="Key features">
+                <div class="section-header">
+                    <p class="section-eyebrow eyebrow" id="feat-eyebrow">Why Secure Pro?</p>
+                    <h2 class="section-heading section-title" id="feat-heading">
+                        Enterprise features.<br /><span>Zero compromise.</span>
+                    </h2>
+                </div>
+                <div class="features-grid-premium" id="features-grid">
+                    <div class="feat-card feature-card">
+                        <div class="feat-icon feature-icon">🔒</div>
+                        <h3 class="feature-title">Kiosk Lockdown</h3>
+                        <p class="feature-desc">Full-screen enforcement blocks alt-tab, taskbar, and all OS-level
+                            shortcuts the moment an exam begins.</p>
+                    </div>
+                    <div class="feat-card feature-card">
+                        <div class="feat-icon feature-icon">🤖</div>
+                        <h3 class="feature-title">AI Proctoring</h3>
+                        <p class="feature-desc">Real-time face detection, voice monitoring, and noise anomaly alerts —
+                            flagged automatically, reviewed at your convenience.</p>
+                    </div>
+                    <div class="feat-card feature-card">
+                        <div class="feat-icon feature-icon">📸</div>
+                        <h3 class="feature-title">Evidence Capture</h3>
+                        <p class="feature-desc">Timestamped screenshots and audio snippets recorded on every detected
+                            violation. Court-admissible audit trails.</p>
+                    </div>
+                    <div class="feat-card feature-card">
+                        <div class="feat-icon feature-icon">🛡️</div>
+                        <h3 class="feature-title">CRC32 Integrity</h3>
+                        <p class="feature-desc">Every exam file is cryptographically signed. Any tampered question set
+                            is rejected before the student can even begin.</p>
+                    </div>
+                    <div class="feat-card feature-card">
+                        <div class="feat-icon feature-icon">📊</div>
+                        <h3 class="feature-title">Instant Reports</h3>
+                        <p class="feature-desc">Automated per-student PDF reports with violation timelines, scores, and
+                            severity levels — generated the moment the exam ends.</p>
+                    </div>
+                    <div class="feat-card feature-card">
+                        <div class="feat-icon feature-icon">🌐</div>
+                        <h3 class="feature-title">Cross-Platform</h3>
+                        <p class="feature-desc">Native apps for Windows 10/11 and macOS 12+. Identical experience. Zero
+                            browser dependency.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Download Section -->
+            <section id="download" class="content-section" aria-label="Download Secure Pro">
+                <div class="section-header">
+                    <p class="download-eyebrow eyebrow" id="dl-eyebrow">Get Started Today</p>
+                    <h2 class="download-heading section-title" id="dl-heading">
+                        Choose your <span>platform.</span>
+                    </h2>
+                    <p class="download-sub" id="dl-sub" style="margin: 0 auto;">
+                        Download the native Secure Pro client for your OS.
+                        Installation takes under 2 minutes. No account required to get started.
+                    </p>
+                </div>
+
+                <div class="download-container-premium download-buttons" id="download-buttons">
+                    <!-- ✅ FIXED: repo owner changed from SupratheekReddy → pranavadithya1234 -->
+                    <a href="https://github.com/pranavadithya1234/securepro-releases/releases/latest/download/SecurePro-Setup.exe"
+                        id="btn-windows" class="dl-btn dl-card" aria-label="Download Secure Pro for Windows" download>
+                        <div class="dl-os-icon os-icon" aria-hidden="true"
+                            style="width: 56px; height: 56px; margin: 0 auto 20px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88"
+                                style="width: 100%; height: 100%;">
+                                <path fill="#00ADEF" d="M0 12.4L35.7 7.6l.016 34.43-35.68.2z" />
+                                <path fill="#00ADEF" d="M35.747 45.79l.023 34.46L.025 75.34l-.01-29.77z" />
+                                <path fill="#00ADEF" d="M39.688 7.01L87.314 0v41.88l-47.626.38z" />
+                                <path fill="#00ADEF" d="M87.328 45.63L87.314 88l-47.626-6.7-.066-35.96z" />
+                            </svg>
+                        </div>
+                        <h3 class="os-name">Windows</h3>
+                        <p class="os-version" style="font-size: 0.82rem; margin-bottom: 20px;">Compatible with Windows
+                            10 &amp; 11 (64-bit)</p>
+                        <div class="dl-btn-premium dl-badge"
+                            style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                stroke-linejoin="round" aria-hidden="true">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                            Download .exe
+                        </div>
+                    </a>
+
+                    <a href="https://github.com/pranavadithya1234/securepro-releases/releases/latest/download/SecurePro.dmg"
+                        id="btn-mac" class="dl-btn dl-card" aria-label="Download Secure Pro for macOS" download>
+                        <div class="dl-os-icon os-icon" aria-hidden="true"
+                            style="width: 56px; height: 56px; margin: 0 auto 20px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 814 1000"
+                                style="width: 100%; height: 100%;">
+                                <path fill="#c0c0c0"
+                                    d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105.3-57.8-155.5-127.4C46 790.9 0 663.1 0 541.8c0-207.1 134.5-316.5 266.3-316.5 99.8 0 163.4 65.5 218.5 65.5 52.8 0 126.7-69 237.8-69 38.2 0 109.2 3.2 168.4 51.4zm-56.7-154.9c26.7-31.9 45.6-76.2 45.6-120.5 0-6.1-.5-12.3-1.6-17.8-42.8 1.6-93.5 28.5-124 64.1-24.3 27.9-46.5 72.2-46.5 117.2 0 6.8 1.1 13.6 1.6 16.2 2.7.5 7 1.1 11.4 1.1 37.6 0 84.7-25.3 113.5-60.3z" />
+                            </svg>
+                        </div>
+                        <h3 class="os-name">macOS</h3>
+                        <p class="os-version" style="font-size: 0.82rem; margin-bottom: 20px;">Compatible with macOS 12
+                            Monterey and later</p>
+                        <div class="dl-btn-premium dl-badge"
+                            style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                stroke-linejoin="round" aria-hidden="true">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                            Download .dmg
+                        </div>
+                    </a>
+                </div>
+
+                <p class="download-meta verification-meta" id="dl-meta"
+                    style="text-align: center; margin-top: 40px; font-size: 0.85rem; color: rgba(255,255,255,0.4);">
+                    Version 1.0.19 &nbsp;·&nbsp; Released May 2026 &nbsp;·&nbsp; <a href="https://github.com/pranavadithya1234/securepro-releases/releases"
+                        target="_blank" style="color:var(--color-accent-2); text-decoration:none;">Changelog</a>
+                </p>
+
+            </section>
+        </main>
+
+        <footer
+            style="padding: 40px 24px; border-top: 1px solid var(--glass-border); text-align: center; background: rgba(3,7,18,0.9);">
+            <p style="margin-bottom: 10px; color: rgba(248, 250, 252, 0.4); font-size: 0.82rem;">
+                &copy; 2026 Secure Pro &nbsp;·&nbsp;
+                <a href="#" style="color:rgba(6, 182, 212, 0.8); text-decoration:none;">Privacy Policy</a> &nbsp;·&nbsp;
+                <a href="#" style="color:rgba(6, 182, 212, 0.8); text-decoration:none;">Terms of Service</a>
+                &nbsp;·&nbsp;
+                <a href="#" style="color:rgba(6, 182, 212, 0.8); text-decoration:none;">Support</a>
+            </p>
+            <p style="color: rgba(248, 250, 252, 0.4); font-size: 0.82rem;">
+                Built with care for educators and institutions worldwide.
+            </p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

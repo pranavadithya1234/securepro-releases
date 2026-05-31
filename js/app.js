@@ -505,6 +505,219 @@ function toast(msg, err = false) {
     setTimeout(() => d.remove(), 3000);
 }
 
+// ─── TOP NAV LINKS ────────────────────────────────────────────────────────────
+function topNav(section, el) {
+    // Update active state on top nav links
+    document.querySelectorAll('.top-nav-links a').forEach(a => a.classList.remove('active'));
+    if (el) el.classList.add('active');
+
+    if (section === 'dashboard') nav('analytics');
+    else if (section === 'exams') {
+        // Show Manage Exams panel (overview of all exams)
+        nav('manage');
+        // Ensure sidebar reflects this
+    } else if (section === 'results') nav('results');
+
+    return false; // prevent page jump from href="#"
+}
+
+// ─── CLOSE ALL DROPDOWNS ──────────────────────────────────────────────────────
+function closeAllDropdowns() {
+    const ids = ['notif-dropdown', 'admin-dropdown'];
+    ids.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#bell-btn') && !e.target.closest('#notif-dropdown'))
+        document.getElementById('notif-dropdown') && (document.getElementById('notif-dropdown').style.display = 'none');
+    if (!e.target.closest('.top-nav-user') && !e.target.closest('#admin-dropdown'))
+        document.getElementById('admin-dropdown') && (document.getElementById('admin-dropdown').style.display = 'none');
+});
+
+// ─── NOTIFICATIONS (Bell) ────────────────────────────────────────────────────
+let _notifStore = JSON.parse(localStorage.getItem('sp_notifications') || '[]');
+
+function addNotification(icon, title, body, type = 'info') {
+    _notifStore.unshift({ icon, title, body, type, time: Date.now() });
+    if (_notifStore.length > 50) _notifStore.pop();
+    localStorage.setItem('sp_notifications', JSON.stringify(_notifStore));
+    const badge = document.getElementById('notif-badge');
+    if (badge) badge.style.display = 'block';
+}
+
+function toggleNotifications(e) {
+    e && e.stopPropagation();
+    const dd = document.getElementById('notif-dropdown');
+    const isOpen = dd.style.display === 'block';
+    closeAllDropdowns();
+    if (!isOpen) {
+        renderNotifications();
+        dd.style.display = 'block';
+        // Mark as read
+        document.getElementById('notif-badge').style.display = 'none';
+    }
+}
+
+function renderNotifications() {
+    const list = document.getElementById('notif-list');
+    if (!list) return;
+
+    // Pull live data from resultsDB to surface violations
+    const liveNotifs = [];
+    Object.keys(resultsDB || {}).forEach(sid => {
+        (resultsDB[sid] || []).forEach(attempt => {
+            (attempt.violations || []).slice(-3).forEach(v => {
+                liveNotifs.push({
+                    icon: '⚠️', title: `Violation: ${v.type?.replace(/_/g, ' ') || 'Unknown'}`,
+                    body: `Student ${sid} — ${new Date(v.time || Date.now()).toLocaleTimeString()}`,
+                    type: 'warn', time: v.time || Date.now()
+                });
+            });
+        });
+    });
+
+    const all = [...liveNotifs, ..._notifStore]
+        .sort((a, b) => b.time - a.time)
+        .slice(0, 20);
+
+    if (all.length === 0) {
+        list.innerHTML = '<div style="padding:30px; text-align:center; color:var(--text-muted); font-size:13px;"><i class="fas fa-check-circle" style="font-size:24px; display:block; margin-bottom:8px; color:#10b981;"></i>All clear — no notifications</div>';
+        return;
+    }
+
+    const colorMap = { warn: '#f59e0b', error: '#ef4444', info: 'var(--primary)', success: '#10b981' };
+    list.innerHTML = all.map(n => `
+        <div style="padding:12px 18px; border-bottom:1px solid var(--border); display:flex; gap:12px; align-items:flex-start; transition:background 0.15s;" onmouseover="this.style.background='rgba(99,102,241,0.04)'" onmouseout="this.style.background=''">
+            <div style="font-size:18px; flex-shrink:0; margin-top:1px;">${n.icon || '🔔'}</div>
+            <div style="flex:1; min-width:0;">
+                <div style="font-weight:600; font-size:13px; color:var(--text-primary); margin-bottom:2px;">${escapeHtml(n.title)}</div>
+                <div style="font-size:12px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(n.body)}</div>
+                <div style="font-size:10px; color:${colorMap[n.type] || 'var(--text-muted)'}; margin-top:3px;">${timeAgo(n.time)}</div>
+            </div>
+        </div>`).join('');
+}
+
+function clearAllNotifications() {
+    _notifStore = [];
+    localStorage.setItem('sp_notifications', '[]');
+    renderNotifications();
+    document.getElementById('notif-badge').style.display = 'none';
+}
+
+function timeAgo(ts) {
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60) return 'just now';
+    if (s < 3600) return Math.floor(s / 60) + 'm ago';
+    if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+    return Math.floor(s / 86400) + 'd ago';
+}
+
+// ─── ADMIN AVATAR DROPDOWN ───────────────────────────────────────────────────
+function toggleAdminMenu(e) {
+    e && e.stopPropagation();
+    const dd = document.getElementById('admin-dropdown');
+    const isOpen = dd.style.display === 'block';
+    closeAllDropdowns();
+    if (!isOpen) dd.style.display = 'block';
+}
+
+// ─── SETTINGS MODAL ──────────────────────────────────────────────────────────
+function toggleSettings(e) {
+    e && e.stopPropagation();
+    const modal = document.getElementById('settings-modal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    // Populate saved values
+    const cfg = JSON.parse(localStorage.getItem('sp_settings') || '{}');
+    if (cfg.gmail) document.getElementById('set-gmail').value = cfg.gmail;
+    if (cfg.gmailPass) document.getElementById('set-gmail-pass').value = cfg.gmailPass;
+    if (cfg.ejsService) document.getElementById('set-ejs-service').value = cfg.ejsService;
+    if (cfg.severity) document.getElementById('set-severity').value = cfg.severity;
+    if (cfg.reverify) document.getElementById('set-reverify').value = cfg.reverify;
+    if (cfg.autodq) document.getElementById('set-autodq').value = cfg.autodq;
+    // About tab: storage size
+    try {
+        let bytes = 0;
+        for (let k in localStorage) { if (localStorage.hasOwnProperty(k)) bytes += ((localStorage[k].length + k.length) * 2); }
+        const kb = (bytes / 1024).toFixed(1);
+        const el = document.getElementById('about-storage');
+        if (el) el.innerText = kb + ' KB used';
+        const pkg = document.getElementById('about-version');
+        if (pkg) pkg.innerText = 'Version 1.0.20';
+    } catch(e) {}
+}
+
+function closeSettings() {
+    const modal = document.getElementById('settings-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+// Close settings modal when clicking backdrop
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('settings-modal');
+    if (modal && e.target === modal) closeSettings();
+});
+
+function switchSettingsTab(tab) {
+    ['security', 'email', 'proctor', 'about'].forEach(t => {
+        const btn = document.getElementById('stab-' + t);
+        const content = document.getElementById('stab-content-' + t);
+        if (btn) btn.classList.toggle('active', t === tab);
+        if (content) content.style.display = t === tab ? 'block' : 'none';
+    });
+}
+
+function changeAdminPassword() {
+    const cur = document.getElementById('set-cur-pass').value;
+    const nw = document.getElementById('set-new-pass').value;
+    const confirm = document.getElementById('set-confirm-pass').value;
+    const stored = localStorage.getItem('sp_admin_pass') || 'admin';
+    if (cur !== stored) return toast('Current password is incorrect', true);
+    if (nw.length < 6) return toast('New password must be at least 6 characters', true);
+    if (nw !== confirm) return toast('Passwords do not match', true);
+    localStorage.setItem('sp_admin_pass', nw);
+    document.getElementById('set-cur-pass').value = '';
+    document.getElementById('set-new-pass').value = '';
+    document.getElementById('set-confirm-pass').value = '';
+    toast('✅ Admin password updated successfully');
+    addNotification('🔐', 'Password Changed', 'Admin password was updated', 'info');
+}
+
+function saveEmailSettings() {
+    const cfg = JSON.parse(localStorage.getItem('sp_settings') || '{}');
+    cfg.gmail = document.getElementById('set-gmail').value.trim();
+    cfg.gmailPass = document.getElementById('set-gmail-pass').value;
+    cfg.ejsService = document.getElementById('set-ejs-service').value.trim();
+    localStorage.setItem('sp_settings', JSON.stringify(cfg));
+    toast('✅ Email settings saved');
+    addNotification('📧', 'Email Settings Saved', 'OTP email config updated', 'success');
+}
+
+function saveProctoringSettings() {
+    const cfg = JSON.parse(localStorage.getItem('sp_settings') || '{}');
+    cfg.severity = document.getElementById('set-severity').value;
+    cfg.reverify = document.getElementById('set-reverify').value;
+    cfg.autodq = document.getElementById('set-autodq').value;
+    localStorage.setItem('sp_settings', JSON.stringify(cfg));
+    // Apply immediately to global constants
+    window.FACE_GRACE_MS = parseInt(cfg.severity) || 2500;
+    window.REVERIFY_INTERVAL = parseInt(cfg.reverify) || 300000;
+    window.AUTO_DQ_LIMIT = parseInt(cfg.autodq) || 5;
+    toast('✅ Proctoring settings saved and applied');
+}
+
+function clearAllData() {
+    if (!confirm('⚠️ This will delete ALL students, exams, results and settings. This cannot be undone. Continue?')) return;
+    const keep = ['sp_admin_pass']; // preserve admin password
+    const saved = {};
+    keep.forEach(k => { saved[k] = localStorage.getItem(k); });
+    localStorage.clear();
+    keep.forEach(k => { if (saved[k]) localStorage.setItem(k, saved[k]); });
+    toast('All data has been reset. Reloading...');
+    setTimeout(() => location.reload(), 1500);
+}
+
 function switchView(v) {
     ['view-login', 'view-admin', 'view-register'].forEach(id => document.getElementById(id).classList.add('hidden'));
     document.getElementById('view-' + v).classList.remove('hidden');
@@ -512,7 +725,8 @@ function switchView(v) {
 
 // --- AUTH ---
 async function handleAdminLogin() {
-    if (document.getElementById('admin-pass').value !== 'admin') return toast("Invalid Password", true);
+    const stored = localStorage.getItem('sp_admin_pass') || 'admin';
+    if (document.getElementById('admin-pass').value !== stored) return toast("Invalid Password", true);
     const btn = document.querySelector('#view-admin button');
     btn.disabled = true; btn.innerText = 'Connecting to cloud...';
     try {
