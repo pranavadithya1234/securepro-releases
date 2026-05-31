@@ -60,7 +60,11 @@ if (!accessKeyId || !secretAccessKey) {
     secretAccessKey = _s1 + _s2;
 }
 
+<<<<<<< HEAD
+const USE_MOCK_AWS = false; // Set to false to use real AWS
+=======
 const USE_MOCK_AWS = true; // Set to false to use real AWS
+>>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 
 let _awsCreds;
 if (!USE_MOCK_AWS) {

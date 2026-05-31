@@ -1,9 +1,15 @@
 // ==========================================
+<<<<<<< HEAD
+// SecurePro — Configuration
+// ==========================================
+
+=======
 // SecurePro — Configuration (HYBRID MOCK MODE)
 // ==========================================
 
 const USE_MOCK_AWS = true; // Still true for S3 and DynamoDB
 
+>>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 // AWS Credentials fallback (REAL)
 let _k1 = 'AKIA6QMZN5VU';
 let _k2 = 'WGW2DRVY';
@@ -62,6 +68,24 @@ if (!accessKeyId || !secretAccessKey) {
     secretAccessKey = _s1 + _s2;
 }
 
+<<<<<<< HEAD
+const USE_MOCK_AWS = false; // Set to false to use real AWS
+
+let _awsCreds;
+if (!USE_MOCK_AWS) {
+    _awsCreds = new AWS.Credentials({
+        accessKeyId: accessKeyId,
+        secretAccessKey: secretAccessKey
+    });
+
+    AWS.config.update({
+        region: awsRegion,
+        credentials: _awsCreds,
+        httpOptions: { timeout: 30000, connectTimeout: 10000 },
+        maxRetries: 3
+    });
+}
+=======
 // ── CLOUD SYNC (FOR MULTI-LAPTOP SYNC) ──────────────────────────
 const CLOUD_SYNC_ID = 'sp_sync_' + accessKeyId.substring(0, 8); 
 const SYNC_URL = `https://kvdb.io/6n5p5C9S7Xn3e3Z6a6v6/${CLOUD_SYNC_ID}`;
@@ -88,6 +112,7 @@ AWS.config.update({
     httpOptions: { timeout: 30000, connectTimeout: 10000 },
     maxRetries: 3
 });
+>>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 
 // ── MOCK AWS IMPLEMENTATION ──────────────────────────────────────────────
 class MockDynamoDB {
@@ -144,6 +169,8 @@ class MockDynamoDB {
                 const key = Object.values(params.Item)[0];
                 this.data[params.TableName][key] = params.Item;
                 this._save();
+<<<<<<< HEAD
+=======
                 // Sync exams/assignments/results
                 const syncTables = [TABLES.exams, TABLES.assignments, TABLES.results];
                 if (syncTables.includes(params.TableName)) {
@@ -172,6 +199,7 @@ class MockDynamoDB {
                     });
                 }
                 this._save();
+>>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
                 return {};
             }
         };
@@ -180,10 +208,13 @@ class MockDynamoDB {
         console.log(`[MockDB] SCAN ${params.TableName}`);
         return {
             promise: async () => {
+<<<<<<< HEAD
+=======
                 if ([TABLES.exams, TABLES.assignments, TABLES.results].includes(params.TableName)) {
                     const cloudData = await getFromCloud(params.TableName);
                     if (cloudData) { this.data[params.TableName] = cloudData; this._save(); }
                 }
+>>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
                 const table = this.data[params.TableName] || {};
                 return { Items: Object.values(table) };
             }
@@ -221,6 +252,9 @@ class MockS3 {
         return {
             promise: async () => {
                 const storageKey = `mock_s3_${params.Key}`;
+<<<<<<< HEAD
+                localStorage.setItem(storageKey, params.Body.toString('base64'));
+=======
                 const b64 = params.Body.toString('base64');
                 localStorage.setItem(storageKey, b64);
                 
@@ -228,6 +262,7 @@ class MockS3 {
                 if (params.Key.startsWith('live/') || params.Key.startsWith('photos/')) {
                     syncToCloud(storageKey, b64);
                 }
+>>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
                 return {};
             }
         };
@@ -237,6 +272,11 @@ class MockS3 {
         return {
             promise: async () => {
                 const storageKey = `mock_s3_${params.Key}`;
+<<<<<<< HEAD
+                const base64 = localStorage.getItem(storageKey);
+                if (!base64) throw new Error('NoSuchKey: The specified key does not exist.');
+                return { Body: Buffer.from(base64, 'base64') };
+=======
                 let b64 = localStorage.getItem(storageKey);
                 
                 // If not local, try fetching from cloud
@@ -247,6 +287,7 @@ class MockS3 {
 
                 if (!b64) throw new Error('NoSuchKey: The specified key does not exist.');
                 return { Body: Buffer.from(b64, 'base64') };
+>>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
             }
         };
     }
@@ -262,6 +303,9 @@ class MockS3 {
         console.log(`[MockS3] SIGNED_URL ${params.Key}`);
         const storageKey = `mock_s3_${params.Key}`;
         const base64 = localStorage.getItem(storageKey);
+<<<<<<< HEAD
+        return base64 ? `data:image/jpeg;base64,${base64}` : '';
+=======
         if (!base64) return '';
         // Detect MIME type from the S3 key path
         let mime = 'image/jpeg'; // default
@@ -274,6 +318,7 @@ class MockS3 {
             mime = 'image/gif';
         }
         return `data:${mime};base64,${base64}`;
+>>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     }
     deleteObject(params) {
         console.log(`[MockS3] DELETE ${params.Key}`);
@@ -286,10 +331,53 @@ class MockS3 {
     }
 }
 
+<<<<<<< HEAD
+class MockRekognition {
+    compareFaces(params, callback) {
+        console.log('[MockAI] Comparing Faces... (Simulated Success)');
+        const result = { FaceMatches: [{ Similarity: 98.5 }] };
+        if (callback) callback(null, result);
+        return { promise: async () => result };
+    }
+    detectFaces(params, callback) {
+        console.log('[MockAI] Detecting Faces... (Simulated Success)');
+        const result = { FaceDetails: [{ Confidence: 99.9 }] };
+        if (callback) callback(null, result);
+        return { promise: async () => result };
+    }
+    detectLabels(params, callback) {
+        console.log('[MockAI] Detecting Labels... (Simulated Success)');
+        const result = { Labels: [{ Name: 'Person', Confidence: 99.9 }] };
+        if (callback) callback(null, result);
+        return { promise: async () => result };
+    }
+}
+
+let rekognition, dynamodb, s3;
+
+if (USE_MOCK_AWS) {
+    console.log('%c[AWS] ⚡ TOTAL MOCK MODE ACTIVE ⚡', 'color: #10b981; font-size: 14px; font-weight: bold;');
+    console.log('[AWS] Bypassing all real AWS calls (Rekognition, S3, DynamoDB)');
+    rekognition = new MockRekognition();
+    dynamodb = new MockDynamoDB();
+    s3 = new MockS3();
+} else {
+    rekognition = new AWS.Rekognition();
+    const _dynamoService = new AWS.DynamoDB({
+        region: 'us-east-1',
+        credentials: _awsCreds,
+        dynamoDbCrc32: false
+    });
+    _dynamoService.config.dynamoDbCrc32 = false;
+    dynamodb = new AWS.DynamoDB.DocumentClient({ service: _dynamoService });
+    s3 = new AWS.S3();
+}
+=======
 // ── INITIALIZATION ────────────────────────────────────────────────────────
 let rekognition = new AWS.Rekognition(); // REAL REKOGNITION
 let dynamodb = new MockDynamoDB();        // MOCK DYNAMODB
 let s3 = new MockS3();                    // MOCK S3
+>>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 
 const TABLES = {
     students: 'securepro-students',
@@ -300,7 +388,11 @@ const TABLES = {
 };
 const S3_BUCKET = s3BucketName;
 
+<<<<<<< HEAD
+// In-memory caches (populated from DynamoDB on demand)
+=======
 // In-memory caches
+>>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 let studentDB = {};
 let examDB = {};
 let assignDB = {};
@@ -324,6 +416,11 @@ async function dbPutStudent(studentId, data) {
     await dynamodb.put({ TableName: TABLES.students, Item: item }).promise();
     studentDB[studentId] = item;
 }
+<<<<<<< HEAD
+async function dbDeleteStudent(studentId) {
+    await dynamodb.delete({ TableName: TABLES.students, Key: { studentId } }).promise();
+    delete studentDB[studentId];
+=======
 async function dbUpdateStudentHeartbeat(studentId, sessionId) {
     await dynamodb.update({
         TableName: TABLES.students,
@@ -338,6 +435,7 @@ async function dbCheckStudentSession(studentId) {
     const now = Date.now();
     const isRecentlyActive = res.Item.lastSeen && (now - res.Item.lastSeen < 60000);
     return { active: isRecentlyActive, sessionId: res.Item.activeSessionId };
+>>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 }
 
 // ── EXAMS ────────────────────────────────────────────────────────────────
