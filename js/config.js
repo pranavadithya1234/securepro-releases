@@ -2,15 +2,15 @@
 // SecurePro — Configuration
 // ==========================================
 // AWS Credentials fallback (REAL)
-let _k1 = 'AKIA6QMZN5VU';
-let _k2 = 'WGW2DRVY';
-let _s1 = 'A7NHPslpKYRQBFh5Hr8L';
-let _s2 = '2EglAFk19p6vYaote7AI';
+let _k1 = 'AKIASN7NCS56';
+let _k2 = 'CXVKID5L';
+let _s1 = '0Q1Ugg2fsaWd86qPGmLy';
+let _s2 = '50eL47+Af6szmTT1BO9Q';
 
 let accessKeyId = '';
 let secretAccessKey = '';
 let awsRegion = 'us-east-1';
-let s3BucketName = 'securepro-assets-1772301636639';
+let s3BucketName = 'securepro-assets-zxyw1y';
 
 // Attempt to load from process.env (Node.js) or standard .env file
 try {
@@ -21,7 +21,7 @@ try {
     accessKeyId = process.env.AWS_ACCESS_KEY_ID || '';
     secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || '';
     awsRegion = process.env.AWS_REGION || 'us-east-1';
-    s3BucketName = process.env.AWS_S3_BUCKET || process.env.S3_BUCKET || 'securepro-assets-1772301636639';
+    s3BucketName = process.env.AWS_S3_BUCKET || process.env.S3_BUCKET || 'securepro-assets-zxyw1y';
 
     // Look for .env file in current directory or parent directory
     const envPaths = [
