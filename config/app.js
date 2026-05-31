@@ -42,7 +42,6 @@ let lastVoiceViolationTs = 0;
 let roomAudioBaseline = { calibrated: false, rms: 0.012, speechRatio: 0.25, zcr: 0.08 };
 let roomAudioCalibration = { active: false, endsAt: 0, rmsSamples: [], speechRatioSamples: [], zcrSamples: [] };
 const AUDIO_CALIBRATION_MS = 5000;
-<<<<<<< HEAD
 const VOICE_MIN_ACTIVE_MS = 250;  // ms of sustained noise before violation fires (was 450)
 const VOICE_MIN_GAP_MS = 3000;    // ms cooldown between voice violations (was 5000)
 const MIN_VOICE_RMS = 0.018;      // absolute floor — ignores pure silence, catches speech (was 0.012)
@@ -51,20 +50,6 @@ let objectDetectionStreak = { phone: 0, object: 0 };
 let liveSnapshotInterval = null;
 const LIVE_SNAPSHOT_MS = 10000; // Send snapshot every 10s
 let mySessionId = Date.now().toString(); // Unique ID for this session (concurrent-session detection)
-=======
-const VOICE_MIN_ACTIVE_MS = 450;
-const VOICE_MIN_GAP_MS = 5000;
-const MIN_VOICE_RMS = 0.012;
-const OBJECT_DETECTION_STREAK_REQUIRED = 2;
-let objectDetectionStreak = { phone: 0, object: 0 };
-let isGazeCalibrated = false;
-let gazePosition = { x: 0, y: 0 };
-let liveSnapshotInterval = null;
-let lastGazeViolationTs = 0;
-let gazeFrameCounter = 0;
-const GAZE_FRAME_SKIP = 10; // Process 1 out of every 10 frames (approx. 3-6 fps)
-const LIVE_SNAPSHOT_MS = 10000; // Send snapshot every 10s
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 
 function normalizeAwsLabel(label) {
     return String(label || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -73,10 +58,7 @@ function normalizeAwsLabel(label) {
 function cleanMojibake(s) {
     if (!s || typeof s !== 'string') return s;
     return s
-<<<<<<< HEAD
         // Common emoji mangling (UTF-8 bytes misread as ISO-8859-1)
-=======
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
         .replace(/\u00f0\u009f\u009f\u00a2/g, '\ud83d\udfe2') // 🟢
         .replace(/\u00e2\u009c\u0085/g, '\u2705')           // ✅
         .replace(/\u00f0\u009f\u00a7\u00aa/g, '\ud83e\uddea') // 🧪
@@ -85,7 +67,6 @@ function cleanMojibake(s) {
         .replace(/\u00e2\u0080\u0093/g, '-')                // –
         .replace(/\u00e2\u0080\u0094/g, '-')                // —
         .replace(/\u00f0\u009f\u0093\u0085/g, '\ud83d\udcc5') // 📅
-<<<<<<< HEAD
         .replace(/\u00e2\u008f\u00b0/g, '\u23f0')           // ⏰
         // Windows Console mangling (UTF-8 bytes misread as CP850/CP437)
         .replace(/\u00d4\u00c7\u00f3/g, '\u2022')           // ÔÇó -> •
@@ -100,9 +81,6 @@ function cleanMojibake(s) {
         .replace(/\u00c2\u00b7/g, '\u00b7')                // Â· -> ·
         .replace(/\u00c3\u00a2\u00e2\u201a\u00ac\u00c2\u00a2/g, '\u2022') // Case for double mangling
         .replace(/\u00e2\u20ac\u00a2/g, '\u2022');
-=======
-        .replace(/\u00e2\u008f\u00b0/g, '\u23f0');           // ⏰
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 }
 
 // --------- SCREEN SCREENSHOT (for TAB_SWITCH proof) -------------------------
@@ -154,152 +132,7 @@ function recordNoiseAudio(durationMs = 5000) {
     });
 }
 
-<<<<<<< HEAD
 
-=======
-// --------- WEBGAZER EYE TRACKING -----------------------------------------
-async function startCalibrationProcess() {
-    const screen = document.getElementById('gaze-calibration-screen');
-    screen.style.display = 'flex';
-
-    // Inject 9 calibration dots
-    const dots = [
-        { t: '10%', l: '10%' }, { t: '10%', l: '50%' }, { t: '10%', l: '90%' },
-        { t: '50%', l: '10%' }, { t: '50%', l: '50%' }, { t: '50%', l: '90%' },
-        { t: '90%', l: '10%' }, { t: '90%', l: '50%' }, { t: '90%', l: '90%' }
-    ];
-
-    let clickedCount = 0;
-    const totalDots = dots.length;
-    const clicksPerDot = 5;
-    const totalNeeded = totalDots * clicksPerDot;
-
-    dots.forEach((pos, idx) => {
-        const dot = document.createElement('div');
-        dot.className = 'calib-dot';
-        dot.style.cssText = `
-            position:absolute; top:${pos.t}; left:${pos.l};
-            width:20px; height:20px; background:#FF2D55; border-radius:50%;
-            cursor:pointer; transform:translate(-50%, -50%);
-            box-shadow:0 0 15px #FF2D55; transition:all 0.2s; z-index:401;
-        `;
-        let clicks = 0;
-        dot.onclick = () => {
-            clicks++;
-            clickedCount++;
-            const progress = (clickedCount / totalNeeded) * 100;
-            document.getElementById('calib-progress-fill').style.width = progress + '%';
-
-            if (clicks >= clicksPerDot) {
-                dot.style.background = '#00D4FF';
-                dot.style.boxShadow = '0 0 15px #00D4FF';
-                dot.style.opacity = '0.5';
-                dot.style.pointerEvents = 'none';
-            } else {
-                dot.style.transform = `translate(-50%, -50%) scale(${1 + clicks * 0.2})`;
-            }
-
-            if (clickedCount >= totalNeeded) {
-                finishCalibration();
-            }
-        };
-        screen.appendChild(dot);
-    });
-}
-
-function finishCalibration() {
-    isGazeCalibrated = true;
-    const screen = document.getElementById('gaze-calibration-screen');
-    if (screen) {
-        screen.style.opacity = '0';
-        setTimeout(() => {
-            screen.style.display = 'none';
-            toast('\u2705 Gaze calibration complete');
-            startHeartbeat(); 
-        }, 500);
-    }
-}
-
-async function initGazeTracking() {
-    try {
-        console.log('[GAZE] Initializing WebGazer (with Electron bypass)...');
-        
-        // ELECTRON BYPASS: WebGazer throws an alert on non-https (file://) protocols.
-        // We temporarily mute relevant alerts before initialization.
-        const _trueAlert = window.alert;
-        window.alert = (m) => {
-            if (m && (m.includes('https') || m.includes('local server'))) {
-                console.warn('[GAZE] Muted HTTPS warning:', m);
-                return; 
-            }
-            _trueAlert(m);
-        };
-
-        webgazer.setRegression('ridge') 
-            .setTracker('Tasmot')    // Lightweight tracker
-            .setGazeListener((data, elapsed) => {
-                if (!data) return;
-
-                // Low-end optimization: Frame skipping
-                gazeFrameCounter++;
-                if (gazeFrameCounter % GAZE_FRAME_SKIP !== 0) return;
-
-                gazePosition.x = data.x;
-                gazePosition.y = data.y;
-
-                // Check for looking away (streak based)
-                checkGazeViolation(data.x, data.y);
-            })
-            .saveDataAcrossSessions(false)
-            .showVideoPreview(false)
-            .showPredictionPoints(false)
-            .begin();
-
-        // Reduce internal video resolution to 320x240 for low CPU usage
-        const checkVideo = setInterval(() => {
-            const wgVid = document.getElementById('webgazerVideoFeed');
-            if (wgVid) {
-                wgVid.width = 320;
-                wgVid.height = 240;
-                clearInterval(checkVideo);
-                console.log('[GAZE] Optimized to 320x240');
-            }
-        }, 500);
-
-    } catch (err) {
-        console.warn('[GAZE] WebGazer init failed:', err.message);
-    }
-}
-
-let gazeOutsideStartTs = 0;
-
-function checkGazeViolation(x, y) {
-    if (!isGazeCalibrated) return;
-
-    const margin = 120; // Reduced margin for cleaner detection
-    const screenWidth = window.innerWidth;
-    const screenHeight = window.innerHeight;
-    const isOutside = (x < -margin || x > screenWidth + margin || y < -margin || y > screenHeight + margin);
-
-    if (isOutside) {
-        if (gazeOutsideStartTs === 0) gazeOutsideStartTs = Date.now();
-        
-        const duration = Date.now() - gazeOutsideStartTs;
-        if (duration >= 2000) { // 2 seconds of looking away
-            const now = Date.now();
-            if (now - lastGazeViolationTs > 10000) { // 10s cooldown for actual violation log
-                lastGazeViolationTs = now;
-                showVio('LOOKING_AWAY');
-            } else if (now - lastGazeViolationTs > 2000) {
-                // Show a smaller toast warning at top right if they continue looking away
-                toast('LOOKING AWAY - RETURN TO SCREEN', true);
-            }
-        }
-    } else {
-        gazeOutsideStartTs = 0;
-    }
-}
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 
 // -- LIVE HEARTBEAT MONITORING (No Video/Snapshots) -------------------------------
 function startHeartbeat() {
@@ -479,26 +312,15 @@ function showUpdateBanner(state, data = {}) {
     if (state === 'available') {
         bar.innerHTML = `
             <div style="display:flex; align-items:center; gap:12px;">
-<<<<<<< HEAD
                 <span style="font-size:22px;">🚀</span>
                 <div>
                     <div style="font-weight:700; color:#f1f5f9;">Update Available — v${data.version}</div>
                     <div style="color:#64748b; font-size:11px;">A new version of SecurePro is ready to download. ${data.releaseNotes ? '(' + data.releaseNotes.substring(0,60) + '...)' : ''}</div>
-=======
-                <span style="font-size:18px;">\u00f0\u0178\u0161\u20ac</span>
-                <div>
-                    <div style="font-weight:700; color:#f1f5f9;">Update Available - v${data.version}</div>
-                    <div style="color:#64748b; font-size:11px;">A new version of SecurePro is ready to download.</div>
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
                 </div>
             </div>
             <div style="display:flex; gap:10px;">
                 <button onclick="ipcRenderer.send('start-update-download')" style="background:linear-gradient(135deg,#00D4FF,#818cf8); color:#000; font-weight:700; border:none; padding:8px 18px; border-radius:8px; cursor:pointer; font-size:12px; width:auto;">
-<<<<<<< HEAD
                     ⬇ Download Update
-=======
-                    \u00e2\u00ac\u2021 Download Update
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
                 </button>
                 <button onclick="document.getElementById('update-banner').remove()" style="background:rgba(255,255,255,0.07); color:#94a3b8; border:1px solid rgba(255,255,255,0.1); padding:8px 14px; border-radius:8px; cursor:pointer; font-size:12px; width:auto;">
                     Later
@@ -506,20 +328,12 @@ function showUpdateBanner(state, data = {}) {
             </div>`;
     } else if (state === 'downloading') {
         const pct = data.percent || 0;
-<<<<<<< HEAD
         const speed = formatBytes(data.bytesPerSecond || 0);
         bar.innerHTML = `
             <div style="flex:1;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                     <span style="font-weight:700; color:#f1f5f9;">⬇ Downloading update... ${pct}%</span>
                     <span style="color:#64748b; font-size:11px;">${speed}/s</span>
-=======
-        bar.innerHTML = `
-            <div style="flex:1;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                    <span style="font-weight:700; color:#f1f5f9;">\u00e2\u00ac\u2021 Downloading update... ${pct}%</span>
-                    <span style="color:#64748b; font-size:11px;">${formatBytes(data.bytesPerSecond || 0)}/s</span>
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
                 </div>
                 <div style="background:rgba(255,255,255,0.07); border-radius:4px; height:6px; overflow:hidden;">
                     <div style="height:100%; width:${pct}%; background:linear-gradient(90deg,#00D4FF,#818cf8); border-radius:4px; transition:width 0.3s;"></div>
@@ -528,41 +342,24 @@ function showUpdateBanner(state, data = {}) {
     } else if (state === 'ready') {
         bar.innerHTML = `
             <div style="display:flex; align-items:center; gap:12px;">
-<<<<<<< HEAD
                 <span style="font-size:22px;">✅</span>
                 <div>
                     <div style="font-weight:700; color:#00FF9D;">Update Ready — v${data.version}</div>
-=======
-                <span style="font-size:18px;">\u2705</span>
-                <div>
-                    <div style="font-weight:700; color:#00FF9D;">Update Ready - v${data.version}</div>
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
                     <div style="color:#64748b; font-size:11px;">Restart SecurePro to apply the update.</div>
                 </div>
             </div>
             <div style="display:flex; gap:10px;">
                 <button onclick="ipcRenderer.send('install-update-now')" style="background:linear-gradient(135deg,#00FF9D,#00D4FF); color:#000; font-weight:700; border:none; padding:8px 18px; border-radius:8px; cursor:pointer; font-size:12px; width:auto;">
-<<<<<<< HEAD
                     🔄 Restart & Update
-=======
-                    \u00f0\u0178\u201d\u201e Restart & Update
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
                 </button>
             </div>`;
     } else if (state === 'error') {
         bar.innerHTML = `
             <div style="display:flex; align-items:center; gap:10px;">
-<<<<<<< HEAD
                 <span>⚠️</span>
                 <span style="color:#f87171;">Update check failed: ${data.message}</span>
             </div>
             <button onclick="document.getElementById('update-banner').remove()" style="background:rgba(255,255,255,0.07); color:#94a3b8; border:1px solid rgba(255,255,255,0.1); padding:6px 12px; border-radius:6px; cursor:pointer; font-size:11px; width:auto;">✕</button>`;
-=======
-                <span>\u00e2\u0161\u00a0\u00ef\u00b8\u008f</span>
-                <span style="color:#f87171;">Update check failed: ${data.message}</span>
-            </div>
-            <button onclick="document.getElementById('update-banner').remove()" style="background:rgba(255,255,255,0.07); color:#94a3b8; border:1px solid rgba(255,255,255,0.1); padding:6px 12px; border-radius:6px; cursor:pointer; font-size:11px; width:auto;">\u00e2\u0153\u2022</button>`;
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     }
 }
 
@@ -575,7 +372,6 @@ function formatBytes(bytes) {
 ipcRenderer.on('update-available', (e, data) => showUpdateBanner('available', data));
 ipcRenderer.on('update-download-progress', (e, data) => showUpdateBanner('downloading', data));
 ipcRenderer.on('update-downloaded', (e, data) => showUpdateBanner('ready', data));
-<<<<<<< HEAD
 ipcRenderer.on('update-error', (e, data) => {
     // Only show banner for real errors (download corruption etc.), not 502/network issues
     const msg = data.message || '';
@@ -585,9 +381,6 @@ ipcRenderer.on('update-error', (e, data) => {
     if (!isBenign) showUpdateBanner('error', data);
     else console.warn('[UPDATE] Ignored benign error:', msg.substring(0, 80));
 });
-=======
-ipcRenderer.on('update-error', (e, data) => showUpdateBanner('error', data));
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 
 // === PHASE 1: NETWORK ANOMALY DETECTION ===
 async function checkNetworkIP() {
@@ -622,7 +415,6 @@ async function periodicFaceReverify() {
         const params = {
             SourceImage: { S3Object: { Bucket: S3_BUCKET, Name: student.photoKey } },
             TargetImage: { Bytes: liveBuffer },
-<<<<<<< HEAD
             SimilarityThreshold: 50 // Get matches above 50%
         };
         rekognition.compareFaces(params, (err, data) => {
@@ -635,15 +427,6 @@ async function periodicFaceReverify() {
                 console.warn('[REVERIFY] Identity Mismatch! Best similarity:', similarity.toFixed(1) + '%');
                 showVio('IDENTITY_MISMATCH');
                 toast('\u26a0\ufe0f Identity Mismatch Detected!', true);
-=======
-            SimilarityThreshold: 70
-        };
-        rekognition.compareFaces(params, (err, data) => {
-            if (err) { console.warn('Face reverify error:', err.message); return; }
-            if (!data.FaceMatches || data.FaceMatches.length === 0 || data.FaceMatches[0].Similarity < 85) {
-                showVio('IDENTITY_MISMATCH');
-                toast('\u00e2\u0161\u00a0\u00ef\u00b8\u008f Face does not match registered photo!', true);
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
             } else {
                 console.log('[REVERIFY] Identity confirmed, similarity:', data.FaceMatches[0].Similarity.toFixed(1) + '%');
             }
@@ -686,11 +469,7 @@ function populateWatermark() {
     if (!el) return;
     const name = studentDB[currentStudent]?.name || currentStudent;
     const ts = new Date().toLocaleString();
-<<<<<<< HEAD
     const text = `${currentStudent} · ${name} · ${ts}`;
-=======
-    const text = `${currentStudent} \u00c2\u00b7 ${name} \u00c2\u00b7 ${ts}`;
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     el.innerHTML = Array(60).fill(`<span style="padding:20px 40px; font-size:11px; font-family:monospace; color:white; white-space:nowrap;">${escapeHtml(text)}</span>`).join('');
 }
 
@@ -707,7 +486,6 @@ function stopAllCameras() {
     if (loginVid && loginVid.srcObject) { loginVid.srcObject.getTracks().forEach(track => track.stop()); loginVid.srcObject = null; }
 }
 
-<<<<<<< HEAD
 async function logout() {
     if (currentStudent) {
         try {
@@ -722,18 +500,11 @@ async function logout() {
 function toast(msg, err = false) {
     const d = document.createElement('div'); d.className = 'toast';
     d.innerHTML = `<span>${cleanMojibake(String(msg))}</span>`;
-=======
-// --- UI HELPERS ---
-function toast(msg, err = false) {
-    const d = document.createElement('div'); d.className = 'toast';
-    d.innerHTML = `<span>${msg}</span>`;
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     if (err) d.style.borderLeftColor = '#ef4444';
     document.getElementById('toast-box').appendChild(d);
     setTimeout(() => d.remove(), 3000);
 }
 
-<<<<<<< HEAD
 // ─── TOP NAV LINKS ────────────────────────────────────────────────────────────
 function topNav(section, el) {
     // Update active state on top nav links
@@ -953,8 +724,6 @@ function clearAllData() {
     setTimeout(() => location.reload(), 1500);
 }
 
-=======
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 function switchView(v) {
     ['view-login', 'view-admin', 'view-register'].forEach(id => document.getElementById(id).classList.add('hidden'));
     document.getElementById('view-' + v).classList.remove('hidden');
@@ -962,7 +731,6 @@ function switchView(v) {
 
 // --- AUTH ---
 async function handleAdminLogin() {
-<<<<<<< HEAD
     const stored = localStorage.getItem('sp_admin_pass') || 'admin';
     if (document.getElementById('admin-pass').value !== stored) return toast("Invalid Password", true);
     const btn = document.querySelector('#view-admin button');
@@ -980,16 +748,6 @@ async function handleAdminLogin() {
         document.getElementById('auth-screen').classList.add('hidden');
         document.getElementById('admin-screen').style.display = 'flex';
         nav('live');
-=======
-    if (document.getElementById('admin-pass').value !== 'admin') return toast("Invalid Password", true);
-    const btn = document.querySelector('#view-admin button');
-    btn.disabled = true; btn.innerText = 'Connecting to cloud...';
-    try {
-        await Promise.all([dbGetAllStudents(), dbGetAllExams(), dbGetAllAssignments(), dbGetAllGroups()]);
-        document.getElementById('auth-screen').classList.add('hidden');
-        document.getElementById('admin-screen').style.display = 'flex';
-        nav('students');
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     } catch (e) { toast('AWS Error: ' + e.message, true); console.error(e); }
     finally { btn.disabled = false; btn.innerText = 'Login'; }
 }
@@ -1042,7 +800,6 @@ async function handleStudentLogin() {
         const targetEmail = studentEmail;
         const maskedEmail = targetEmail.replace(/^(.)(.*)(@.*)$/, (_, a, b, c) => a + '*'.repeat(Math.min(b.length, 6)) + c);
 
-<<<<<<< HEAD
         const https = require('https');
 
         let logoBase64 = '';
@@ -1086,9 +843,6 @@ Technology Stack
 * GitHub Releases
 
 SecurePro AI represents the future of secure digital assessments — delivering reliability, academic integrity, and intelligent automation for modern remote examinations.`;
-=======
-        console.log('[OTP] Sending to:', targetEmail, '| Name:', studentName, '| OTP:', otpCode);
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 
         const showVerificationUI = () => {
             document.getElementById('otp-group').classList.remove('hidden');
@@ -1099,40 +853,7 @@ SecurePro AI represents the future of secure digital assessments — delivering 
         };
 
         const fallbackToEmailJS = () => {
-<<<<<<< HEAD
             console.log('[OTP] Falling back to EmailJS for target:', targetEmail);
-=======
-            const https = require('https');
-            let logoBase64 = '';
-            try {
-                const fs = require('fs');
-                const path = require('path');
-                const logoPath = path.join(__dirname, '..', 'assets', 'logo.png');
-                if (fs.existsSync(logoPath)) {
-                    logoBase64 = 'data:image/png;base64,' + fs.readFileSync(logoPath).toString('base64');
-                }
-            } catch (e) {
-                console.warn('[EMAIL] Failed to load logo base64:', e);
-            }
-
-            const EMAIL_EXTRA_TEXT = `SecurePro AI – Intelligent Examination Security Platform
-
-SecurePro AI is a next-generation, AI-powered examination proctoring platform designed to ensure the integrity, transparency, and security of remote assessments. Built as a secure cross-platform desktop application using Electron, the platform combines intelligent monitoring, advanced system protection, and seamless user experience to create a trusted digital examination environment.
-
-The system leverages real-time AI-driven behavioral analysis to identify suspicious activities, unauthorized assistance, and examination policy violations while maintaining a smooth and non-intrusive experience for students. SecurePro AI is engineered with enterprise-grade security features including hardened runtime protection, elevated execution controls, and secure application architecture to prevent tampering and unauthorized access.
-
-Designed for modern educational institutions, certification providers, and enterprise assessment systems, SecurePro AI supports Windows, macOS (Intel & Apple Silicon), and Linux through native installers and standalone executables. Integrated auto-update capabilities ensure continuous delivery of security enhancements and platform improvements.
-
-Core Features:
-* AI-powered intelligent exam monitoring
-* Secure desktop examination environment
-* Real-time suspicious activity detection
-* Cross-platform compatibility
-* Automated secure updates
-* Native PDF handling and document processing
-* Enterprise-grade architecture and scalability`;
-
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
             const postData = JSON.stringify({
                 service_id: EMAILJS_SERVICE_ID,
                 template_id: EMAILJS_TEMPLATE_ID,
@@ -1162,11 +883,7 @@ Core Features:
                 res.on('data', chunk => body += chunk);
                 res.on('end', () => {
                     if (res.statusCode === 200) {
-<<<<<<< HEAD
                         toast(`✉️ OTP sent to ${maskedEmail}`);
-=======
-                        toast(`✉️ OTP sent to ${maskedEmail} (via EmailJS)`);
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
                     } else {
                         console.error('EmailJS API error:', res.statusCode, body);
                         toast("Email failed! Fallback OTP: " + otpCode, true);
@@ -1187,10 +904,7 @@ Core Features:
 
         // Attempt direct sending via nodemailer
         try {
-<<<<<<< HEAD
             console.log('[OTP] Attempting direct SMTP via nodemailer for:', targetEmail);
-=======
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
             const nodemailer = require('nodemailer');
             const fs = require('fs');
             const path = require('path');
@@ -1274,10 +988,7 @@ Core Features:
             transporter.sendMail(mailOptions, (error, info) => {
                 if (error) {
                     console.warn('[EMAIL] Direct SMTP failed, falling back to EmailJS:', error);
-<<<<<<< HEAD
                     console.warn('[EMAIL] IMPORTANT: If you are using Gmail (securepro.kmit@gmail.com), please ensure you have enabled 2-Step Verification and generated a 16-character App Password (not your password yyrupvoaegcadfvp) at https://myaccount.google.com/apppasswords.');
-=======
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
                     fallbackToEmailJS();
                 } else {
                     console.log('[EMAIL] Direct SMTP sent successfully:', info.response);
@@ -1295,7 +1006,6 @@ Core Features:
 
         // Test account bypass: skip face scan completely
         if (isTestBypassUser(id)) {
-<<<<<<< HEAD
             try {
                 // Concurrent Login Check
                 const session = await dbCheckStudentSession(id);
@@ -1314,16 +1024,6 @@ Core Features:
                 setInterval(() => dbUpdateStudentHeartbeat(currentStudent, mySessionId), 30000);
                 dbUpdateStudentHeartbeat(currentStudent, mySessionId);
             } catch (e) { toast("Session check failed", true); }
-=======
-            currentStudent = id;
-            document.getElementById('otp-group').classList.add('hidden');
-            document.getElementById('cam-container').classList.add('hidden');
-            document.getElementById('auth-screen').style.display = 'none';
-            document.getElementById('auth-screen').classList.add('hidden');
-            document.getElementById('student-screen').style.display = 'block';
-            document.getElementById('student-screen').classList.remove('hidden');
-            loadMyExams();
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
             return;
         }
 
@@ -1394,11 +1094,8 @@ async function verifyFace(id, stream, statusEl, btn) {
     if (isTestBypassUser(id)) {
         if (stream) stream.getTracks().forEach(t => t.stop());
         currentStudent = id;
-<<<<<<< HEAD
         const studentName = studentDB[id]?.name || id;
         document.getElementById('welcome-student').innerText = `Welcome back, ${cleanMojibake(studentName)}`;
-=======
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
         document.getElementById('auth-screen').style.display = 'none';
         document.getElementById('auth-screen').classList.add('hidden');
         document.getElementById('student-screen').style.display = 'block';
@@ -1462,7 +1159,6 @@ async function verifyFace(id, stream, statusEl, btn) {
                 return;
             }
             if (d.FaceMatches && d.FaceMatches.length > 0) {
-<<<<<<< HEAD
                 if (statusEl) statusEl.innerText = '\ud83d\udd0d Checking active sessions...';
                 
                 dbCheckStudentSession(id).then(session => {
@@ -1498,15 +1194,6 @@ async function verifyFace(id, stream, statusEl, btn) {
                     if (btn) { btn.innerText = "Verify OTP"; btn.disabled = false; }
                 });
 
-=======
-                if (statusEl) statusEl.innerText = '\u2705 Face Verified!';
-                currentStudent = id;
-                document.getElementById('auth-screen').style.display = 'none';
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('student-screen').style.display = 'block';
-                document.getElementById('student-screen').classList.remove('hidden');
-                loadMyExams();
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
             } else {
                 if (id === TEST_BYPASS_ID) {
                     currentStudent = id;
@@ -1549,7 +1236,6 @@ async function registerUser() {
 // --- ADMIN ---
 async function nav(p) {
     document.querySelectorAll('.panel').forEach(d => d.classList.remove('active'));
-<<<<<<< HEAD
     document.querySelectorAll('.sidebar .nav-item').forEach(d => d.classList.remove('active'));
     
     const panel = document.getElementById('panel-' + p);
@@ -1557,11 +1243,6 @@ async function nav(p) {
     
     if (panel) panel.classList.add('active');
     if (navItem) navItem.classList.add('active');
-=======
-    document.querySelectorAll('.nav-item').forEach(d => d.classList.remove('active'));
-    document.getElementById('panel-' + p).classList.add('active');
-    document.getElementById('nav-' + p).classList.add('active');
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     try {
         if (p === 'students') await loadStudents();
         if (p === 'create') { await dbGetAllExams(); loadExamList(); }
@@ -1646,12 +1327,8 @@ async function loadLiveExams() {
 
 function openExamMonitoring(examId, title) {
     currentMonitoringExamId = examId;
-<<<<<<< HEAD
     const titleEl = document.getElementById('live-exam-title') || document.getElementById('monitoring-exam-title');
     if (titleEl) titleEl.innerText = title;
-=======
-    document.getElementById('monitoring-exam-title').innerText = title;
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     document.getElementById('live-active-exams-wrap').classList.add('hidden');
     document.getElementById('live-monitoring-view').classList.remove('hidden');
     
@@ -1665,16 +1342,9 @@ function backToActiveExams() {
 }
 
 async function refreshLiveMonitor(examId) {
-<<<<<<< HEAD
     const grid = document.getElementById('active-sessions-grid');
     const activeCountEl = document.getElementById('live-active-count');
     if (!grid) return;
-=======
-    const list = document.getElementById('live-monitor-list');
-    const activeCount = document.getElementById('live-count-active');
-    const empty = document.getElementById('live-empty-state');
-    if (!list) return;
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 
     try {
         await dbGetAllAssignments();
@@ -1690,16 +1360,11 @@ async function refreshLiveMonitor(examId) {
         });
 
         let activeNum = 0;
-<<<<<<< HEAD
         grid.innerHTML = '';
-=======
-        list.innerHTML = '';
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 
         studentIds.forEach(sid => {
             const student = studentDB[sid] || { name: sid };
             const hb = `live/${examId}/${sid}.heartbeat`;
-<<<<<<< HEAD
             const snapshot = `live/${examId}/${sid}.jpg`;
             const isActive = activeS3Keys.includes(hb) || activeS3Keys.includes(snapshot);
 
@@ -1730,44 +1395,12 @@ async function refreshLiveMonitor(examId) {
         if (activeNum === 0) {
             grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:60px; color:var(--text-muted);"><i class="fas fa-user-slash" style="font-size:24px; margin-bottom:15px; display:block;"></i>No active students found.</div>';
         }
-=======
-            const snapshot = `live/${examId}/${sid}.jpg`; // Old legacy snapshots
-            const isActive = activeS3Keys.includes(hb) || activeS3Keys.includes(snapshot);
-
-            if (isActive) activeNum++;
-
-            const row = document.createElement('tr');
-            row.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
-            row.innerHTML = `
-                <td style="padding:15px 20px; font-weight:600; color:${isActive ? 'var(--text-primary)' : 'var(--text-muted)'};">
-                    ${escapeHtml(cleanMojibake(student.name))}
-                </td>
-                <td style="padding:15px 20px; font-family:var(--font-mono); font-size:12px; color:var(--text-muted);">
-                    ${escapeHtml(sid)}
-                </td>
-                <td style="padding:15px 20px; text-align:right;">
-                    ${isActive ? `
-                        <span style="background:rgba(0,255,157,0.1); color:#00FF9D; padding:4px 10px; border-radius:20px; font-size:10px; font-weight:700;">
-                            <i class="fas fa-circle" style="font-size:7px; margin-right:5px; animation: glowPulse 1.5s infinite;"></i> WRITING
-                        </span>
-                    ` : `
-                        <span style="color:#64748b; font-size:10px; font-weight:600;">OFFLINE</span>
-                    `}
-                </td>
-            `;
-            list.appendChild(row);
-        });
-
-        if (activeCount) activeCount.innerText = activeNum;
-        if (empty) empty.style.display = activeNum > 0 ? 'none' : 'block';
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 
     } catch (err) {
         console.warn('[LIVE] Monitor refresh failed:', err);
     }
 }
 
-<<<<<<< HEAD
 async function selectSession(sid, examId, riskClass) {
     const noSelection = document.getElementById('no-session-selected');
     const content = document.getElementById('session-detail-content');
@@ -1807,8 +1440,6 @@ async function selectSession(sid, examId, riskClass) {
     `;
 }
 
-=======
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 
 async function loadAnalytics() {
     const container = document.getElementById('analytics-content');
@@ -1816,7 +1447,6 @@ async function loadAnalytics() {
     container.innerHTML = '<div style="color:#a78bfa; text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:24px;"></i><div style="margin-top:12px; font-size:13px;">Loading analytics...</div></div>';
 
     try {
-<<<<<<< HEAD
         // Auto-refresh analytics every 10s while tab is active
         if (!window._analyticsInterval) {
             window._analyticsInterval = setInterval(() => {
@@ -1828,8 +1458,6 @@ async function loadAnalytics() {
                 }
             }, 10000);
         }
-=======
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
         await dbGetAllStudents();
         await dbGetAllExams();
 
@@ -1986,11 +1614,7 @@ async function loadExamAnalytics(examId) {
     const highRisk = attempts.filter(a => (a.cheatingScore || 0) > 50).length;
     const avgCheatingScore = attempts.length > 0 ? Math.round(attempts.reduce((s, a) => s + (a.cheatingScore || 0), 0) / attempts.length) : 0;
 
-<<<<<<< HEAD
     const vioTypeLabels = { NO_FACE: 'No Face Detected', MULTIPLE_FACES: 'Multiple Faces', PHONE_DETECTED: 'Phone Recognition', TAB_SWITCH: 'Tab Switch', LOOKING_AWAY: 'Looking Away', NOISE_DETECTED: 'Voice Detected', COPY_PASTE_ATTEMPT: 'Copy/Paste', AI_PASTE_DETECTED: 'AI Paste', LIP_MOVEMENT: 'Lip Movement', BANNED_PROCESS_RUNNING: 'Banned App Running', MULTIPLE_DISPLAYS: 'Multiple Displays', NETWORK_ANOMALY: 'Network Anomaly', IDENTITY_MISMATCH: 'Identity Mismatch', UNNATURAL_TYPING: 'Unnatural Typing', CURSOR_OUT_OF_BOUNDS: 'Cursor Out of Bounds', INACTIVITY_DETECTED: 'Inactivity Detected', OBJECT_DETECTED: 'Object Detected' };
-=======
-    const vioTypeLabels = { NO_FACE: 'No Face Detected', MULTIPLE_FACES: 'Multiple Faces', PHONE_DETECTED: 'Phone Recognition', TAB_SWITCH: 'Tab Switch', LOOKING_AWAY: 'Looking Away', NOISE_DETECTED: 'Voice Detected', COPY_PASTE_ATTEMPT: 'Copy/Paste', AI_PASTE_DETECTED: 'AI Paste', LIP_MOVEMENT: 'Lip Movement', BANNED_PROCESS_RUNNING: 'Banned App', MULTIPLE_DISPLAYS: 'Multi-Display', NETWORK_ANOMALY: 'Network Anomaly', IDENTITY_MISMATCH: 'Identity Mismatch', UNNATURAL_TYPING: 'Unnat. Typing', CURSOR_OUT_OF_BOUNDS: 'Cursor Out', INACTIVITY_DETECTED: 'Inactivity', OBJECT_DETECTED: 'Object Detected' };
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     const topVios = Object.entries(vioTypeCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
 
     // Score distribution histogram
@@ -2135,7 +1759,6 @@ async function deleteStudent(id) {
 function addQBlock(type) {
     const div = document.createElement('div');
     div.className = 'added-q';
-<<<<<<< HEAD
     div.style.cssText = 'padding:16px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; margin-bottom:12px; position:relative;';
 
     let extra = '';
@@ -2150,60 +1773,27 @@ function addQBlock(type) {
     if (type === 'code') extra = `
         <label style="font-size:11px; color:#94a3b8; font-weight:600; display:block; margin:12px 0 4px;">PROGRAMMING LANGUAGE</label>
         <select class="q-lang" style="font-size:13px;">
-=======
-    div.style.cssText = 'padding:16px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; margin-bottom:12px;';
-
-    let extra = '';
-    if (type === 'mcq') extra = `
-        <label style="font-size:11px; color:#94a3b8; font-weight:600; display:block; margin:8px 0 4px;">OPTIONS (e.g. A:Paris, B:London, C:Rome)</label>
-        <input type="text" class="q-opt" placeholder="A: Option 1, B: Option 2, C: Option 3" style="background:rgba(255,255,255,0.07); color:#f1f5f9; border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:8px 12px; width:100%; font-size:13px;">
-        <label style="font-size:11px; color:#94a3b8; font-weight:600; display:block; margin:8px 0 4px;">CORRECT ANSWER (e.g. A)</label>
-        <input type="text" class="q-ans" placeholder="A" style="background:rgba(255,255,255,0.07); color:#f1f5f9; border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:8px 12px; width:100%; font-size:13px;">`;
-    if (type === 'long') extra = `
-        <label style="font-size:11px; color:#94a3b8; font-weight:600; display:block; margin:8px 0 4px;">AI GRADING KEYWORDS (comma-separated)</label>
-        <textarea class="q-keywords" placeholder="e.g. Photosynthesis, Chlorophyll, Sunlight" style="background:rgba(255,255,255,0.07); color:#f1f5f9; border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:8px 12px; width:100%; font-size:13px; min-height:60px; resize:vertical;"></textarea>`;
-    if (type === 'code') extra = `
-        <label style="font-size:11px; color:#94a3b8; font-weight:600; display:block; margin:8px 0 4px;">LANGUAGE</label>
-        <select class="q-lang" style="background:rgba(255,255,255,0.07); color:#f1f5f9; border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:8px 12px; width:100%; font-size:13px;">
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
             <option value="javascript">JavaScript</option>
             <option value="python">Python</option>
             <option value="c">C</option>
             <option value="c++">C++</option>
-<<<<<<< HEAD
             <option value="java">Java</option>
         </select>
         <label style="font-size:11px; color:#94a3b8; font-weight:600; display:block; margin:12px 0 4px;">STDIN INPUT (optional)</label>
         <input type="text" class="q-input-val" placeholder="e.g. 5" style="font-size:13px;">
         <label style="font-size:11px; color:#94a3b8; font-weight:600; display:block; margin:8px 0 4px;">EXPECTED STDOUT OUTPUT</label>
         <textarea class="q-output-val" placeholder="e.g. 25" style="font-size:13px; min-height:80px;"></textarea>`;
-=======
-        </select>
-        <label style="font-size:11px; color:#94a3b8; font-weight:600; display:block; margin:8px 0 4px;">STDIN INPUT (optional)</label>
-        <input type="text" class="q-input-val" placeholder="e.g. 5" style="background:rgba(255,255,255,0.07); color:#f1f5f9; border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:8px 12px; width:100%; font-size:13px;">
-        <label style="font-size:11px; color:#94a3b8; font-weight:600; display:block; margin:8px 0 4px;">EXPECTED OUTPUT</label>
-        <textarea class="q-output-val" placeholder="e.g. 25" style="background:rgba(255,255,255,0.07); color:#f1f5f9; border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:8px 12px; width:100%; font-size:13px; min-height:60px; resize:vertical;"></textarea>`;
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 
     const typeColors = { mcq: '#00FF9D', long: '#818cf8', code: '#f59e0b' };
     const typeColor = typeColors[type] || '#94a3b8';
 
     div.innerHTML = `
-<<<<<<< HEAD
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
             <span style="font-size:10px; font-weight:700; letter-spacing:0.1em; color:${typeColor}; background:${typeColor}15; padding:4px 12px; border-radius:20px; border:1px solid ${typeColor}30;">${type.toUpperCase()}</span>
             <button class="btn-secondary" onclick="this.closest('.added-q').remove()" style="width:auto; padding:5px 12px; font-size:11px; color:var(--error); border-color:var(--error); background:transparent; opacity:0.7; hover:opacity:1;">Remove</button>
         </div>
         <label style="font-size:11px; color:#94a3b8; font-weight:600; display:block; margin-bottom:4px;">QUESTION TEXT</label>
         <textarea class="q-txt" placeholder="Enter the question here..." style="font-size:13px; min-height:60px;"></textarea>
-=======
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-            <span style="font-size:11px; font-weight:700; letter-spacing:0.08em; color:${typeColor}; background:${typeColor}22; padding:3px 10px; border-radius:20px; border:1px solid ${typeColor}44;">${type.toUpperCase()}</span>
-            <button class="secondary" onclick="this.closest('.added-q').remove()" style="font-size:11px; width:auto; padding:4px 10px; color:#ef4444; border-color:rgba(239,68,68,0.3); background:rgba(239,68,68,0.08);">\u00e2\u0153\u2022 Remove</button>
-        </div>
-        <label style="font-size:11px; color:#94a3b8; font-weight:600; display:block; margin-bottom:4px;">QUESTION TEXT</label>
-        <input type="text" class="q-txt" placeholder="Enter your question here..." style="background:rgba(255,255,255,0.07); color:#f1f5f9; border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:8px 12px; width:100%; font-size:13px;">
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
         ${extra}
         <input type="hidden" class="q-type" value="${type}">`;
 
@@ -2211,7 +1801,6 @@ function addQBlock(type) {
 }
 
 // Auto-generate questions from PDF via Groq LLaMA
-<<<<<<< HEAD
 // Auto-generate questions from PDF via Groq LLaMA
 let _tempPdfText = "";
 
@@ -2219,13 +1808,10 @@ function closeAiModal() {
     document.getElementById('ai-options-modal').style.display = 'none';
 }
 
-=======
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 async function handlePdfUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-<<<<<<< HEAD
     let pdfParse;
     try {
         const mod = require('pdf-parse');
@@ -2305,49 +1891,10 @@ async function startAiGeneration(text, type, count) {
 
         TEXT SOURCE:
         ${text.substring(0, 8000)}`;
-=======
-    // Check if the file is genuinely a PDF by using node fs + pdf-parse (runs in renderer thanks to nodeIntegration)
-    const fs = require('fs');
-    let pdfParse;
-    try {
-        pdfParse = require('pdf-parse');
-    } catch (e) {
-        toast('\u274c Missing dependency: pdf-parse not installed.', true);
-        return;
-    }
-
-    toast('\u23f3 Reading PDF and generating questions...');
-    try {
-        const dataBuffer = fs.readFileSync(file.path);
-        const data = await pdfParse(dataBuffer);
-        const text = data.text;
-
-        if (!text || text.trim().length === 0) {
-            return toast('No extractable text found in PDF.', true);
-        }
-
-        // Truncate to avoid hitting LLaMA context limits too aggressively, assume first 15000 chars are the exams
-        const truncatedText = text.substring(0, 15000);
-
-        const prompt = `You are an AI assistant helping a professor digitize an exam. I will provide you with text extracted from an exam PDF. Extract ALL the questions (MCQs, short/long answers, and coding questions) along with their correct expected answers. Format your output strictly as a valid JSON array of objects. Do not wrap it in markdown block quotes (no \`\`\`json). Output raw JSON only. Here is the exact structure you MUST follow for each item in the array:
-
-For Multiple Choice Questions:
-{"type":"mcq", "text":"<question text>", "opts":"A: <opt1>, B: <opt2>...", "ans":"<A or B or C or D>"}
-
-For Long/Short Answers:
-{"type":"long", "text":"<question text>", "keywords":"<keyword1>, <keyword2>, ..."}
-
-For Coding/Programming Questions:
-{"type":"code", "text":"<question instructions>", "lang":"<javascript or python or c or c++>", "inp":"<sample stdin input>", "out":"<expected compilation output>"}
-
-Extracted Exam Text:
-${truncatedText}`;
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',
             headers: {
-<<<<<<< HEAD
                 'Authorization': `Bearer ${GROQ_API_KEY}`,
                 'Content-Type': 'application/json'
             },
@@ -2404,70 +1951,6 @@ ${truncatedText}`;
     } catch (e) {
         console.error('AI Gen Error:', e);
         toast('\u274c AI failed to generate accurate questions.', true);
-=======
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${GROQ_API_KEY}`
-            },
-            body: JSON.stringify({
-                model: GROQ_MODEL,
-                messages: [{ role: 'user', content: prompt }],
-                temperature: 0.2,
-                max_tokens: 3500
-            })
-        });
-
-        if (!response.ok) throw new Error('Groq API error ' + response.status);
-
-        const apiData = await response.json();
-        let reply = (apiData.choices?.[0]?.message?.content || '').trim();
-        if (reply.startsWith('\`\`\`')) reply = reply.replace(/^\`\`\`(?:json)?\s*/i, '').replace(/\s*\`\`\`$/, '');
-
-        const questions = JSON.parse(reply);
-
-        if (!Array.isArray(questions) || questions.length === 0) {
-            throw new Error('No questions extracted or invalid format returned.');
-        }
-
-        questions.forEach(q => {
-            if (['mcq', 'long', 'code'].includes(q.type)) {
-                addQBlock(q.type);
-                const blocks = document.querySelectorAll('#q-area .added-q');
-                const lastBlock = blocks[blocks.length - 1];
-
-                if (lastBlock) {
-                    const txtEl = lastBlock.querySelector('.q-txt');
-                    if (txtEl && q.text) txtEl.value = q.text;
-
-                    if (q.type === 'mcq') {
-                        const optEl = lastBlock.querySelector('.q-opt');
-                        const ansEl = lastBlock.querySelector('.q-ans');
-                        if (optEl && q.opts) optEl.value = q.opts;
-                        if (ansEl && q.ans) ansEl.value = q.ans;
-                    } else if (q.type === 'long') {
-                        const kwEl = lastBlock.querySelector('.q-keywords');
-                        if (kwEl && q.keywords) kwEl.value = q.keywords;
-                    } else if (q.type === 'code') {
-                        const langEl = lastBlock.querySelector('.q-lang');
-                        const inpEl = lastBlock.querySelector('.q-input-val');
-                        const outEl = lastBlock.querySelector('.q-output-val');
-                        if (langEl && q.lang) {
-                            const l = String(q.lang).toLowerCase();
-                            if (['javascript', 'python', 'c', 'c++'].includes(l)) langEl.value = l;
-                        }
-                        if (inpEl && q.inp) inpEl.value = q.inp;
-                        if (outEl && q.out) outEl.value = q.out;
-                    }
-                }
-            }
-        });
-
-        toast(`\u2705 Auto-generated ${questions.length} questions from PDF!`);
-    } catch (err) {
-        console.error('PDF Parse/AI Extraction Error:', err);
-        toast('\u274c Failed to extract questions: ' + err.message, true);
-    } finally {
-        event.target.value = ''; // Reset input to allow re-upload 
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     }
 }
 
@@ -2542,7 +2025,6 @@ async function doAssign() {
 }
 
 async function sendExamInvitationEmail(student, exam, windowInfo) {
-<<<<<<< HEAD
     const https = require('https');
     
     let logoBase64 = '';
@@ -2558,23 +2040,6 @@ async function sendExamInvitationEmail(student, exam, windowInfo) {
     }
 
     const EMAIL_EXTRA_TEXT = `SecurePro AI – Intelligent Examination Security Platform
-=======
-    const fallbackToEmailJS = () => {
-        const https = require('https');
-        let logoBase64 = '';
-        try {
-            const fs = require('fs');
-            const path = require('path');
-            const logoPath = path.join(__dirname, '..', 'assets', 'logo.png');
-            if (fs.existsSync(logoPath)) {
-                logoBase64 = 'data:image/png;base64,' + fs.readFileSync(logoPath).toString('base64');
-            }
-        } catch (e) {
-            console.warn('[EMAIL] Failed to load logo base64:', e);
-        }
-
-        const EMAIL_EXTRA_TEXT = `SecurePro AI – Intelligent Examination Security Platform
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 
 SecurePro AI is a next-generation, AI-powered examination proctoring platform designed to ensure the integrity, transparency, and security of remote assessments. Built as a secure cross-platform desktop application using Electron, the platform combines intelligent monitoring, advanced system protection, and seamless user experience to create a trusted digital examination environment.
 
@@ -2582,19 +2047,14 @@ The system leverages real-time AI-driven behavioral analysis to identify suspici
 
 Designed for modern educational institutions, certification providers, and enterprise assessment systems, SecurePro AI supports Windows, macOS (Intel & Apple Silicon), and Linux through native installers and standalone executables. Integrated auto-update capabilities ensure continuous delivery of security enhancements and platform improvements.
 
-<<<<<<< HEAD
 Core Features
 
-=======
-Core Features:
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 * AI-powered intelligent exam monitoring
 * Secure desktop examination environment
 * Real-time suspicious activity detection
 * Cross-platform compatibility
 * Automated secure updates
 * Native PDF handling and document processing
-<<<<<<< HEAD
 * Enterprise-grade architecture and scalability
 
 Technology Stack
@@ -2611,10 +2071,6 @@ SecurePro AI represents the future of secure digital assessments — delivering 
 
     const fallbackToEmailJS = () => {
         console.log('[EMAIL] Falling back to EmailJS for exam invitation:', student.email);
-=======
-* Enterprise-grade architecture and scalability`;
-
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
         const postData = JSON.stringify({
             service_id: EMAILJS_SERVICE_ID,
             template_id: EMAILJS_TEMPLATE_ID,
@@ -2643,10 +2099,7 @@ SecurePro AI represents the future of secure digital assessments — delivering 
     // Attempt direct nodemailer
     return new Promise((resolve, reject) => {
         try {
-<<<<<<< HEAD
             console.log('[EMAIL] Attempting direct SMTP via nodemailer for invitation:', student.email);
-=======
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
             const nodemailer = require('nodemailer');
             const fs = require('fs');
             const path = require('path');
@@ -2745,10 +2198,7 @@ SecurePro AI represents the future of secure digital assessments — delivering 
             transporter.sendMail(mailOptions, (error, info) => {
                 if (error) {
                     console.warn('[EMAIL] Direct SMTP failed, falling back to EmailJS:', error);
-<<<<<<< HEAD
                     console.warn('[EMAIL] IMPORTANT: If you are using Gmail (securepro.kmit@gmail.com), please ensure you have enabled 2-Step Verification and generated a 16-character App Password (not your password yyrupvoaegcadfvp) at https://myaccount.google.com/apppasswords.');
-=======
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
                     fallbackToEmailJS().then(resolve).catch(reject);
                 } else {
                     console.log('[EMAIL] Direct SMTP sent successfully:', info.response);
@@ -2831,10 +2281,7 @@ function loadManageExams() {
         let ac = 0; Object.values(assignDB).forEach(list => { if (list.includes(eid)) ac++; });
         html += `<tr style="border-bottom:1px solid #e5e7eb;"><td style="padding:12px; font-weight:600;">${escapeHtml(exam.title)}</td><td style="padding:12px;">${qc}</td><td style="padding:12px;">${tb || '-'}</td><td style="padding:12px;">${ac > 0 ? ac + ' student' + (ac > 1 ? 's' : '') : '<span style="color:#94a3b8;">None</span>'}</td><td style="padding:12px; display:flex; gap:8px;">
             <button onclick="runPlagiarismCheck('${eid}')" class="secondary" style="width:auto; padding:6px 14px; font-size:12px; background:rgba(0,212,255,0.1); color:#00D4FF; border-color:rgba(0,212,255,0.3);"><i class="fas fa-search"></i> Check Plagiarism</button>
-<<<<<<< HEAD
             <button onclick="publishAndPurgeProofs('${eid}')" class="btn-primary" style="width:auto; padding:6px 14px; font-size:12px; background:linear-gradient(135deg, #10b981, #059669);"><i class="fas fa-check-double"></i> Publish & Purge</button>
-=======
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
             <button onclick="deleteExam('${eid}')" class="danger" style="width:auto; padding:6px 14px; font-size:12px;"><i class="fas fa-trash"></i> Delete</button>
         </td></tr>`;
     });
@@ -2928,7 +2375,6 @@ async function deleteExam(eid) {
     } catch (e) { toast('Delete failed: ' + e.message, true); }
 }
 
-<<<<<<< HEAD
 async function publishAndPurgeProofs(eid) {
     const exam = examDB[eid];
     if (!exam) return;
@@ -2979,17 +2425,11 @@ async function publishAndPurgeProofs(eid) {
 let currentResultViewExamID = '';
 
 // Layer 1: Show all exams
-=======
-// --- RESULTS & AI GRADING ---
-
-// Layer 1: Show all students who have results
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 async function loadResults() {
     document.getElementById('results-student-list').classList.remove('hidden');
     document.getElementById('results-history-view').classList.add('hidden');
     document.getElementById('results-detail-view').classList.add('hidden');
     const list = document.getElementById('results-student-list');
-<<<<<<< HEAD
     list.innerHTML = '<div style="color:#94a3b8; padding:20px; text-align:center;"><i class="fas fa-spinner fa-spin"></i> Loading exams...</div>';
     try {
         await dbGetAllExams();
@@ -3171,73 +2611,18 @@ async function showExamAttempts(examId) {
     } catch (e) {
         historyList.innerHTML = `<div style="color:#ef4444; padding:20px;">Error: ${e.message}</div>`;
     }
-=======
-    list.innerHTML = '<div style="color:#94a3b8; padding:20px; text-align:center;">Loading...</div>';
-    try {
-        const ids = await dbGetAllResultStudentIds();
-        await dbGetAllStudents();
-        list.innerHTML = '';
-        for (const sid of ids.filter(id => studentDB[id])) {
-            const attempts = await dbGetStudentResults(sid);
-            if (attempts.length > 0) {
-                list.innerHTML += `<div class="result-card" onclick="showStudentResults('${sid}')"><div><b>${escapeHtml(studentDB[sid].name)}</b><div style="font-size:12px;color:#64748b;">ID: ${sid}</div></div><div class="badge pass">${attempts.length} Attempt${attempts.length > 1 ? 's' : ''}</div></div>`;
-            }
-        }
-        if (list.innerHTML === '') list.innerHTML = '<div style="color:#94a3b8; text-align:center; padding:40px;">No exam results yet.</div>';
-    } catch (e) { list.innerHTML = `<div style="color:#ef4444; padding:20px;">Error: ${e.message}</div>`; }
-}
-
-// Layer 2: Show all exam attempts for a student
-async function showStudentResults(sid) {
-    currentResultViewID = sid;
-    document.getElementById('results-student-list').classList.add('hidden');
-    document.getElementById('results-history-view').classList.remove('hidden');
-    document.getElementById('results-detail-view').classList.add('hidden');
-    document.getElementById('history-student-name').innerText = (studentDB[sid]?.name || sid) + ' - Exam History';
-    const historyList = document.getElementById('exam-history-list');
-    historyList.innerHTML = '<div style="color:#94a3b8; padding:20px; text-align:center;">Loading...</div>';
-
-    const attempts = await dbGetStudentResults(sid);
-    if (attempts.length === 0) { historyList.innerHTML = '<div style="color:#94a3b8; padding:20px; text-align:center;">No exam attempts found.</div>'; return; }
-
-    historyList.innerHTML = '';
-    attempts.forEach((attempt) => {
-        const examTitle = attempt.examTitle || (examDB[attempt.examID] ? examDB[attempt.examID].title : 'Unknown Exam');
-        const qc = attempt.answers ? attempt.answers.length : 0;
-        const hasGrades = attempt.grades && attempt.grades.length > 0;
-        const totalScore = hasGrades ? attempt.grades.reduce((s, g) => s + (g || 0), 0) : null;
-        const maxScore = qc * 10;
-        const scoreBadge = hasGrades ? `<span class="badge ${totalScore > maxScore / 2 ? 'pass' : 'fail'}">${totalScore}/${maxScore}</span>` : '<span class="badge" style="background:#e5e7eb; color:#6b7280;">Not Graded</span>';
-        const score = attempt.cheatingScore || 0;
-        const scoreColor = score <= 20 ? '#10b981' : score <= 50 ? '#f59e0b' : '#ef4444';
-        const scoreLabel = score <= 20 ? 'Low Risk' : score <= 50 ? 'Medium Risk' : 'HIGH RISK \u26a0';
-        const riskBadge = `<span style="padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700; background:${score <= 20 ? '#dcfce7' : score <= 50 ? '#fef9c3' : '#fee2e2'}; color:${scoreColor};">${score}/100 \u00b7 ${scoreLabel}</span>`;
-        const vioCount = (attempt.violations || []).length;
-        const vioLine = vioCount > 0 ? `<div style="font-size:11px; color:#ef4444; margin-top:3px;">\u26a0 ${vioCount} violation${vioCount > 1 ? 's' : ''} recorded</div>` : `<div style="font-size:11px; color:#10b981; margin-top:3px;">\u2705 No violations</div>`;
-
-        historyList.innerHTML += `<div class="result-card" style="cursor:default;"><div style="flex:1;"><div style="font-weight:600; margin-bottom:4px;">${examTitle}</div><div style="font-size:12px; color:#64748b;">${qc} questions</div>${vioLine}</div><div style="display:flex; align-items:center; gap:10px;">${riskBadge} ${scoreBadge}<button onclick="viewAttemptDetails('${sid}', '${attempt.attemptId}')" style="width:auto; padding:8px 16px; font-size:12px;"><i class="fas fa-eye"></i> View</button><button onclick="deleteAttempt('${sid}', '${attempt.attemptId}')" class="danger" style="width:auto; padding:8px 16px; font-size:12px;"><i class="fas fa-trash"></i> Delete</button></div></div>`;
-    });
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 }
 
 // Delete a specific exam attempt
 async function deleteAttempt(sid, attemptId) {
     const attempt = (resultsDB[sid] || []).find(a => a.attemptId === attemptId);
     if (!attempt || !confirm('Delete this attempt? Cannot be undone.')) return;
-<<<<<<< HEAD
     const examId = attempt.examID;
-=======
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     try {
         for (const v of (attempt.violations || [])) { if (v.screenshotKey) await s3DeleteObject(v.screenshotKey).catch(() => { }); }
         await dbDeleteResult(sid, attemptId);
         toast('Attempt deleted');
-<<<<<<< HEAD
         showExamAttempts(examId);
-=======
-        if (!resultsDB[sid] || resultsDB[sid].length === 0) loadResults();
-        else showStudentResults(sid);
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     } catch (e) { toast('Delete failed: ' + e.message, true); }
 }
 
@@ -3248,16 +2633,10 @@ function viewAttemptDetails(sid, attemptId) {
     document.getElementById('results-student-list').classList.add('hidden');
     document.getElementById('results-history-view').classList.add('hidden');
     document.getElementById('results-detail-view').classList.remove('hidden');
-<<<<<<< HEAD
     document.getElementById('res-student-name').innerText = cleanMojibake(studentDB[sid]?.name || sid);
     const attempt = (resultsDB[sid] || []).find(a => a.attemptId === attemptId);
     if (!attempt) { toast('Attempt not found', true); return; }
     currentResultViewExamID = attempt.examID;
-=======
-    document.getElementById('res-student-name').innerText = studentDB[sid]?.name || sid;
-    const attempt = (resultsDB[sid] || []).find(a => a.attemptId === attemptId);
-    if (!attempt) { toast('Attempt not found', true); return; }
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     const examTitle = attempt.examTitle || (examDB[attempt.examID] ? examDB[attempt.examID].title : 'Unknown Exam');
     document.getElementById('res-exam-title').innerText = examTitle;
 
@@ -3278,13 +2657,8 @@ function viewAttemptDetails(sid, attemptId) {
         const ad = ans.isCode ? `<pre style="background:#0A0F1A; color:#CDD6F4; padding:12px; border-radius:8px; overflow-x:auto; font-size:13px; margin:0; border:1px solid rgba(255,255,255,0.06);">${escapeHtml(ans.answer)}</pre>` : `<div style="background:rgba(255,255,255,0.03); padding:12px; border:1px solid rgba(255,255,255,0.07); border-radius:6px; font-size:14px; line-height:1.6; color:var(--text-secondary);">${escapeHtml(ans.answer) || '<em style="color:var(--text-muted);">No answer provided</em>'}</div>`;
         const timeStr = ans.timeSpentSeconds != null ? (ans.timeSpentSeconds < 60 ? `${ans.timeSpentSeconds}s` : `${Math.floor(ans.timeSpentSeconds / 60)}m ${ans.timeSpentSeconds % 60}s`) : 'N/A';
         const isFast = attempt.fastAnswerFlags && attempt.fastAnswerFlags.some(q => ans.question.startsWith(q.substring(0, 30)));
-<<<<<<< HEAD
         const timeBadge = `<span style="font-size:11px; padding:2px 8px; border-radius:4px; margin-left:8px; background:${isFast ? 'rgba(255,45,85,0.1)' : 'rgba(0,212,255,0.08)'}; color:${isFast ? '#FF2D55' : '#94A3B8'}; border:1px solid ${isFast ? 'rgba(255,45,85,0.3)' : 'rgba(0,212,255,0.15)'};">\u23F1 ${timeStr}${isFast ? ' \u26A1 FAST' : ''}</span>`;
         content.innerHTML += `<div class="answer-block" id="ans-block-${i}"><div style="font-weight:600; margin-bottom:8px; color:var(--text-primary); display:flex; align-items:center;"><span class="q-number-chip">${i + 1}</span>${escapeHtml(ans.question)}${timeBadge}</div>${ad}<div class="ai-feedback-box" id="ai-feed-${i}" style="${ef ? 'display:block;' : ''}">${ef ? `<b>Score: ${eg}/10</b><br>${ef}` : ''}</div><div style="display:flex; align-items:center; gap:10px; margin-top:12px; padding:10px; background:rgba(0,212,255,0.04); border-radius:8px; border:1px solid var(--border-accent);"><label style="font-size:13px; font-weight:600; color:var(--accent); white-space:nowrap; font-family:var(--font-mono);">SCORE:</label><input type="number" id="manual-score-${i}" min="0" max="10" step="0.5" value="${eg}" placeholder="0&ndash;10" style="width:80px; margin-bottom:0; text-align:center; font-weight:600;"><span style="font-size:13px; color:var(--text-muted);">/ 10</span></div></div>`;
-=======
-        const timeBadge = `<span style="font-size:11px; padding:2px 8px; border-radius:4px; margin-left:8px; background:${isFast ? 'rgba(255,45,85,0.1)' : 'rgba(0,212,255,0.08)'}; color:${isFast ? '#FF2D55' : '#94A3B8'}; border:1px solid ${isFast ? 'rgba(255,45,85,0.3)' : 'rgba(0,212,255,0.15)'};">\u00e2\u008f\u00b1 ${timeStr}${isFast ? ' \u00e2\u0161\u00a1 FAST' : ''}</span>`;
-        content.innerHTML += `<div class="answer-block" id="ans-block-${i}"><div style="font-weight:600; margin-bottom:8px; color:var(--text-primary); display:flex; align-items:center;"><span class="q-number-chip">${i + 1}</span>${escapeHtml(ans.question)}${timeBadge}</div>${ad}<div class="ai-feedback-box" id="ai-feed-${i}" style="${ef ? 'display:block;' : ''}">${ef ? `<b>Score: ${eg}/10</b><br>${ef}` : ''}</div><div style="display:flex; align-items:center; gap:10px; margin-top:12px; padding:10px; background:rgba(0,212,255,0.04); border-radius:8px; border:1px solid var(--border-accent);"><label style="font-size:13px; font-weight:600; color:var(--accent); white-space:nowrap; font-family:var(--font-mono);">SCORE:</label><input type="number" id="manual-score-${i}" min="0" max="10" step="0.5" value="${eg}" placeholder="0\u00e2\u20ac\u201c10" style="width:80px; margin-bottom:0; text-align:center; font-weight:600;"><span style="font-size:13px; color:var(--text-muted);">/ 10</span></div></div>`;
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     });
 }
 
@@ -3326,11 +2700,7 @@ function renderProctorReport(attempt) {
     document.getElementById('vio-summary-body').innerHTML = rows || '<tr><td colspan="3" style="padding:8px; color:var(--text-muted);">No violations recorded</td></tr>';
     const grid = document.getElementById('vio-photo-grid');
     const typeColors = { NO_FACE: '#ef4444', MULTIPLE_FACES: '#ef4444', PHONE_DETECTED: '#dc2626', TAB_SWITCH: '#f59e0b', LOOKING_AWAY: '#f97316', NOISE_DETECTED: '#6366f1', COPY_PASTE_ATTEMPT: '#f59e0b', AI_PASTE_DETECTED: '#7C3AED', LIP_MOVEMENT: '#EC4899', BANNED_PROCESS_RUNNING: '#dc2626', MULTIPLE_DISPLAYS: '#f97316', NETWORK_ANOMALY: '#f59e0b', IDENTITY_MISMATCH: '#ef4444', OBJECT_DETECTED: '#f97316', UNNATURAL_TYPING: '#7C3AED', CURSOR_OUT_OF_BOUNDS: '#94a3b8', INACTIVITY_DETECTED: '#64748b' };
-<<<<<<< HEAD
     const proofBadge = { screen: '🖥️ Screen', camera: '📷 Webcam', audio: '🎤 Audio', none: '-' };
-=======
-    const proofBadge = { screen: '\u00f0\u0178\u2013\u00a5\u00ef\u00b8\u008f Screen', camera: '\ud83d\udcc4\u00b7 Webcam', audio: '\u00f0\u0178\u017d\u00a4 Audio', none: '-' };
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     if (violations.length === 0) { grid.innerHTML = '<p style="color:#94a3b8; font-size:13px;">No proof captured.</p>'; }
     else {
         grid.innerHTML = violations.map(v => {
@@ -3349,11 +2719,7 @@ function renderProctorReport(attempt) {
                     <audio controls src="${audioUrl}" style="width:100%;height:28px;"></audio>
                 </div>`;
             } else if (v.screenshotKey) {
-<<<<<<< HEAD
                 const lbl = pType === 'screen' ? '🖥️ Screen Capture' : '📷 Webcam Photo';
-=======
-                const lbl = pType === 'screen' ? '\u00f0\u0178\u2013\u00a5\u00ef\u00b8\u008f Screen Capture' : '\ud83d\udcc4\u00b7 Webcam Photo';
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
                 proofHtml = `<div style="position:relative;">
                     <img src="${s3GetSignedUrl(v.screenshotKey)}" style="width:100%;height:110px;object-fit:cover;border-radius:6px 6px 0 0;display:block;">
                     <span style="position:absolute;bottom:4px;left:4px;font-size:9px;background:rgba(0,0,0,0.75);color:#fff;padding:2px 5px;border-radius:3px;">${lbl}</span>
@@ -3365,13 +2731,8 @@ function renderProctorReport(attempt) {
                 ${proofHtml}
                 <div style="padding:8px;">
                     <div style="font-weight:700;color:${c};margin-bottom:3px;">${typeLabels[v.type] || v.type}</div>
-<<<<<<< HEAD
                     <div style="color:#64748b;">🕐 ${ts}</div>
                     <div style="color:#64748b;">⏱ ${mins}m ${secs}s into exam</div>
-=======
-                    <div style="color:#64748b;">\u00f0\u0178\u2022\u0090 ${ts}</div>
-                    <div style="color:#64748b;">\u00e2\u008f\u00b1 ${mins}m ${secs}s into exam</div>
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
                     <div style="color:#475569;font-size:10px;margin-top:2px;">${proofBadge[pType] || pType}</div>
                 </div>
             </div>`;
@@ -3416,11 +2777,7 @@ async function saveManualGrades() {
 
 // Navigation helpers
 function backToStudentList() { loadResults(); }
-<<<<<<< HEAD
 function backToHistory() { showExamAttempts(currentResultViewExamID); }
-=======
-function backToHistory() { showStudentResults(currentResultViewID); }
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 function backToResults() { loadResults(); }
 
 // HTML escaping utility
@@ -3676,7 +3033,6 @@ async function runAutoCorrect() {
 // --- STUDENT EXAM ---
 async function loadMyExams() {
     const list = document.getElementById('my-exam-list');
-<<<<<<< HEAD
     if (!list) return;
     
     // Update student name and avatar dynamically in header
@@ -3698,15 +3054,11 @@ async function loadMyExams() {
 
     list.innerHTML = '<div style="color:var(--text-muted); padding:40px; text-align:center;"><i class="fas fa-spinner fa-spin" style="margin-bottom:10px; font-size:20px;"></i><br>Loading your exams...</div>';
     
-=======
-    list.innerHTML = '<div style="color:#94a3b8; padding:20px; text-align:center;">Loading your exams...</div>';
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     try {
         const examIds = await dbGetAssignments(currentStudent);
         await dbGetAllExams();
         await dbGetStudentResults(currentStudent);
         list.innerHTML = '';
-<<<<<<< HEAD
         
         const available = examIds.filter(eid => examDB[eid]);
         const completedExamIds = new Set((resultsDB[currentStudent] || []).map(a => a.examID));
@@ -3748,14 +3100,6 @@ async function loadMyExams() {
             return; 
         }
 
-=======
-        const available = examIds.filter(eid => examDB[eid]);
-        if (available.length === 0) { list.innerHTML = '<div style="color:#94a3b8; padding:20px; text-align:center;">No exams assigned yet.</div>'; return; }
-
-        const completedExamIds = new Set((resultsDB[currentStudent] || []).map(a => a.examID));
-        const now = Date.now();
-
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
         available.forEach(eid => {
             const e = examDB[eid];
             const isCompleted = completedExamIds.has(eid);
@@ -3768,7 +3112,6 @@ async function loadMyExams() {
             const afterWindow = hasWindow && now > windowEnd;
             const windowLocked = beforeWindow || afterWindow;
 
-<<<<<<< HEAD
             let badgeHtml = '';
             let btnHtml = '';
             
@@ -3805,31 +3148,6 @@ async function loadMyExams() {
                 </div>
                 ${btnHtml}
             </div>`;
-=======
-            let windowBadge = '';
-            let windowNote = '';
-            if (hasWindow) {
-                const startStr = new Date(e.startAt).toLocaleString();
-                const endStr = new Date(e.endAt).toLocaleString();
-                if (beforeWindow) {
-                    windowBadge = `<span style="font-size:11px; background:rgba(251,191,36,0.15); color:#fbbf24; border:1px solid rgba(251,191,36,0.3); padding:3px 8px; border-radius:20px;">\u00e2\u008f\u00b0 Opens ${startStr}</span>`;
-                } else if (afterWindow) {
-                    windowBadge = `<span style="font-size:11px; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:3px 8px; border-radius:20px;">\u26d4 Closed ${endStr}</span>`;
-                } else {
-                    windowBadge = `<span style="font-size:11px; background:rgba(0,255,157,0.1); color:#00FF9D; border:1px solid rgba(0,255,157,0.25); padding:3px 8px; border-radius:20px;">\ud83d\udfe2 Open until ${endStr}</span>`;
-                }
-                windowNote = `<div style="font-size:11px; color:#64748b; margin-top:3px;">${startStr} \u2192 ${endStr}</div>`;
-            }
-
-            if (isCompleted) {
-                list.innerHTML += `<div class="result-card" style="cursor:default; opacity:0.7;"><div><b>${escapeHtml(cleanMojibake(e.title))}</b><div style="font-size:12px;color:#64748b;">${e.questions.length} Questions \u2022 ${e.duration} mins</div></div><span class="badge" style="background:rgba(0,255,157,0.1); color:#00FF9D; border:1px solid rgba(0,255,157,0.25); font-size:12px;">\u2713 COMPLETED</span></div>`;
-            } else if (windowLocked) {
-                list.innerHTML += `<div class="result-card" style="cursor:default; opacity:0.75;"><div style="flex:1;"><b>${escapeHtml(cleanMojibake(e.title))}</b><div style="font-size:12px;color:#64748b;">${e.questions.length} Questions \u2022 ${e.duration} mins</div>${windowNote}</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">${windowBadge}</div></div>`;
-            } else {
-                const windowInfo = hasWindow ? `<div style="font-size:11px; color:#64748b; margin-top:3px;">\ud83d\udcc5 ${new Date(e.startAt).toLocaleString()} \u2192 ${new Date(e.endAt).toLocaleString()}</div>` : '';
-                list.innerHTML += `<div class="result-card" onclick="startExam('${eid}')"><div style="flex:1;"><b>${escapeHtml(cleanMojibake(e.title))}</b><div style="font-size:12px;color:#64748b;">${e.questions.length} Questions \u2022 ${e.duration} mins</div>${windowInfo}${windowBadge ? '<div style="margin-top:4px;">' + windowBadge + '</div>' : ''}</div><button style="width:auto; padding:8px 20px;">Start Exam</button></div>`;
-            }
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
         });
     } catch (e) { list.innerHTML = `<div style="color:#ef4444; padding:20px;">Error: ${e.message}</div>`; }
 }
@@ -3851,7 +3169,6 @@ function switchStudentTab(tab) {
 }
 
 async function loadMyResults() {
-<<<<<<< HEAD
     const tableBody = document.getElementById('results-table-body');
     if (!tableBody) return;
     
@@ -3867,20 +3184,10 @@ async function loadMyResults() {
             if (document.getElementById('stat-avg-score')) document.getElementById('stat-avg-score').innerText = '0%';
             return; 
         }
-=======
-    const list = document.getElementById('my-results-list');
-    list.innerHTML = '<div style="color:#94a3b8; padding:20px; text-align:center;">Loading your results...</div>';
-    try {
-        await dbGetAllExams();
-        const results = await dbGetStudentResults(currentStudent);
-        list.innerHTML = '';
-        if (results.length === 0) { list.innerHTML = '<div style="color:#94a3b8; padding:20px; text-align:center;">No results available yet.</div>'; return; }
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 
         // Sort by timestamp descending
         results.sort((a, b) => b.timestamp - a.timestamp);
 
-<<<<<<< HEAD
         let totalPercent = 0;
         let gradedCount = 0;
 
@@ -3892,22 +3199,10 @@ async function loadMyResults() {
             const questionCount = res.answers ? res.answers.length : 0;
             const maxScore = questionCount * 10;
 
-=======
-        results.forEach(res => {
-            const e = examDB[res.examID];
-            const examTitle = e ? e.title : res.examID;
-
-            // Calculate total marks possible (matches admin panel logic)
-            const questionCount = res.answers ? res.answers.length : 0;
-            const maxScore = questionCount * 10;
-
-            // Check if attempt has been graded by admin
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
             const isGraded = res.grades && res.grades.length > 0;
             let totalAchieved = 0;
             if (isGraded) {
                 res.grades.forEach(g => { if (typeof g === 'number') totalAchieved += g; });
-<<<<<<< HEAD
                 const p = maxScore > 0 ? (totalAchieved / maxScore) * 100 : 0;
                 totalPercent += p;
                 gradedCount++;
@@ -3956,29 +3251,6 @@ async function loadMyResults() {
     } catch (e) { 
         tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px; color:var(--error);">Error: ${e.message}</td></tr>`; 
     }
-=======
-            }
-
-            const dateStr = new Date(res.timestamp).toLocaleString();
-
-            let statusBadge = '';
-            if (isGraded) {
-                const passClass = totalAchieved > maxScore / 2 ? 'color:var(--success); background:rgba(0,255,157,0.1); border:1px solid rgba(0,255,157,0.2);' : 'color:var(--danger); background:rgba(255,45,85,0.1); border:1px solid rgba(255,45,85,0.2);';
-                statusBadge = `<div class="badge" style="${passClass} font-size:14px; padding:6px 12px;"> Score: ${totalAchieved} / ${maxScore} </div>`;
-            } else {
-                statusBadge = `<div class="badge" style="background:#1e293b; color:#94a3b8; font-size:12px; padding:6px 12px; border:1px solid #334155;"> Not Graded Yet </div>`;
-            }
-
-            list.innerHTML += `<div class="result-card" style="cursor:default; align-items:center;">
-                <div>
-                    <b>${escapeHtml(examTitle)}</b>
-                    <div style="font-size:12px;color:#64748b;">Submitted: ${dateStr}</div>
-                </div>
-                ${statusBadge}
-            </div>`;
-        });
-    } catch (e) { list.innerHTML = `<div style="color:#ef4444; padding:20px;">Error: ${e.message}</div>`; }
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 }
 
 async function startExam(eid) {
@@ -4400,18 +3672,10 @@ async function launchExam(eid, videoDeviceId, audioDeviceId) {
         ipcRenderer.send('show-blackout'); // \ud83d\udda4 Black out + global shortcut blocking
         checkNetworkIP();
         networkCheckInterval = setInterval(checkNetworkIP, 300000);
-<<<<<<< HEAD
         faceReverifyInterval = setInterval(periodicFaceReverify, 120000); 
 
 
 
-=======
-        faceReverifyInterval = setInterval(periodicFaceReverify, 600000);
-
-        // EYE TRACKING & LIVE MONITORING
-        initGazeTracking();
-        setTimeout(startCalibrationProcess, 2000);
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
         document.addEventListener('keydown', trackTypingSpeed);
         document.addEventListener('mouseleave', trackCursorLeave);
         document.addEventListener('mousemove', trackActivity);
@@ -4420,7 +3684,6 @@ async function launchExam(eid, videoDeviceId, audioDeviceId) {
         setInterval(checkQuestionTimeouts, 1000);
         populateWatermark();
 
-<<<<<<< HEAD
         // Clamp severity: old exams may have large values (5000, 8000ms). Cap at 2500ms max for fast detection.
         const rawSeverity = parseInt(e.severity) || 2500;
         const clampedSeverity = Math.min(rawSeverity, 2500);
@@ -4428,12 +3691,6 @@ async function launchExam(eid, videoDeviceId, audioDeviceId) {
     } catch (err) {
         console.error('Media Error:', err);
         toast(`Hardware Error: ${err.message}`, true);
-=======
-        proctorInt = setInterval(() => checkFrame(), parseInt(e.severity));
-    } catch (err) {
-        console.error('Media Error:', err);
-        alert(`Hardware Error: ${err.name} - ${err.message}.\nCheck camera permissions.`);
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     }
 
     // Feature 7: Auto-save + restore draft
@@ -4519,11 +3776,7 @@ async function submitPaper() {
     if (faceReverifyInterval) clearInterval(faceReverifyInterval);
     if (inactivityInterval) clearInterval(inactivityInterval);
     if (liveSnapshotInterval) clearInterval(liveSnapshotInterval);
-<<<<<<< HEAD
 
-=======
-    try { if (typeof webgazer !== 'undefined') webgazer.end(); } catch (e) { }
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 
     ipcRenderer.send('stop-process-monitor');
     ipcRenderer.send('hide-blackout'); // \u2705 Remove black overlay - exam over
@@ -4662,13 +3915,9 @@ function finishRoomAudioCalibration() {
 
     roomAudioBaseline = {
         calibrated: true,
-<<<<<<< HEAD
         // Cap at 0.035 — prevents a loud calibration environment from setting an
         // unreachable threshold. Any real speech will always be above this cap.
         rms: Math.min(Math.max(0.008, rmsMean || 0.012), 0.035),
-=======
-        rms: Math.max(0.008, rmsMean || 0.012),
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
         speechRatio: Math.max(0.12, speechMean || 0.22),
         zcr: Math.max(0.03, zcrMean || 0.08)
     };
@@ -4728,17 +3977,10 @@ function getAudioFeatures() {
 
 function isLikelyVoice(features) {
     if (!features) return false;
-<<<<<<< HEAD
     // Threshold: 1.2× the room baseline (was 1.5×).
     // Lower multiplier means real speech — which is always well above ambient —
     // triggers reliably even in a quiet room.
     const rmsGate = Math.max(MIN_VOICE_RMS, roomAudioBaseline.rms * 1.2);
-=======
-    // Act as a room noise threshold: Any noise 1.5x louder than the room's average
-    // will trigger the alarm, rather than specifically restricting to human voice only.
-    const rmsGate = Math.max(MIN_VOICE_RMS, roomAudioBaseline.rms * 1.5);
-
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     return features.rms >= rmsGate;
 }
 
@@ -4797,15 +4039,10 @@ function monitorAudio() {
     if (!roomAudioBaseline.calibrated) return;
 
     const likelyVoice = isLikelyVoice(features);
-<<<<<<< HEAD
     // Accumulate when voice is active; decay slowly (0.8×) when quiet
     // so short speech bursts reliably reach VOICE_MIN_ACTIVE_MS threshold.
     if (likelyVoice) voiceActiveMs += deltaMs;
     else voiceActiveMs = Math.max(0, voiceActiveMs - (deltaMs * 0.8));
-=======
-    if (likelyVoice) voiceActiveMs += deltaMs;
-    else voiceActiveMs = Math.max(0, voiceActiveMs - (deltaMs * 1.7));
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 
     if (
         likelyVoice &&
@@ -4818,14 +4055,11 @@ function monitorAudio() {
     }
 }
 
-<<<<<<< HEAD
 
 
 
 
 
-=======
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 // --- PROCTORING ---
 function checkFrame() {
     const v = document.getElementById('exam-video');
@@ -4837,7 +4071,6 @@ function checkFrame() {
     const b = getBuffer(b64);
     if (b.length < 100) return;
 
-<<<<<<< HEAD
     const phoneLabels = new Set(['phone', 'mobile phone', 'cell phone', 'cellphone', 'smartphone', 'telephone', 'electronics', 'remote control', 'handheld device']);
     const objectLabels = new Set(['book', 'textbook', 'tablet', 'tablet computer', 'ipad', 'document', 'paper', 'notes']);
 
@@ -4858,57 +4091,14 @@ function checkFrame() {
         const isPhone = labels.some(l => phoneLabels.has(l.name) && l.confidence >= 70);
         objectDetectionStreak.phone = isPhone ? objectDetectionStreak.phone + 1 : 0;
         if (objectDetectionStreak.phone >= 2) {
-=======
-    // Strict allow-list (exact normalized label match only)
-    const phoneLabels = new Set([
-        'phone', 'mobile phone', 'cell phone', 'smartphone', 'telephone'
-    ]);
-    const objectLabels = new Set([
-        'book', 'textbook',
-        'tablet', 'tablet computer', 'ipad',
-        'document', 'paper'
-    ]);
-
-    rekognition.detectLabels({ Image: { Bytes: b }, MinConfidence: 85 }, (e, d) => {
-        if (e || !d || !d.Labels) return;
-        const labels = d.Labels.map(l => ({
-            name: normalizeAwsLabel(l.Name),
-            confidence: Number(l.Confidence || 0),
-            hasInstance: Array.isArray(l.Instances) && l.Instances.length > 0
-        }));
-
-        // Phone detection
-        const isPhone = labels.some(l =>
-            phoneLabels.has(l.name) &&
-            l.confidence >= 90 &&
-            l.hasInstance
-        );
-        objectDetectionStreak.phone = isPhone ? objectDetectionStreak.phone + 1 : 0;
-        if (objectDetectionStreak.phone >= OBJECT_DETECTION_STREAK_REQUIRED) {
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
             objectDetectionStreak.phone = 0;
             showVio('PHONE_DETECTED');
         }
 
-<<<<<<< HEAD
         // Forbidden object detection — streak 2 required
         const foundObj = labels.find(l => objectLabels.has(l.name) && l.confidence >= 75);
         objectDetectionStreak.object = foundObj ? objectDetectionStreak.object + 1 : 0;
         if (objectDetectionStreak.object >= 2) {
-=======
-        // Book / electronics detection
-        const foundObj = labels.find(l =>
-            objectLabels.has(l.name) &&
-            l.confidence >= 93 &&
-            l.hasInstance
-        );
-        if (foundObj) {
-            objectDetectionStreak.object += 1;
-        } else {
-            objectDetectionStreak.object = 0;
-        }
-        if (objectDetectionStreak.object >= OBJECT_DETECTION_STREAK_REQUIRED) {
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
             objectDetectionStreak.object = 0;
             showVio('OBJECT_DETECTED');
         }
@@ -4917,7 +4107,6 @@ function checkFrame() {
     if (!isTestBypassUser()) {
         rekognition.detectFaces({ Image: { Bytes: b }, Attributes: ['ALL'] }, (e, d) => {
             if (!e) {
-<<<<<<< HEAD
                 if (d.FaceDetails.length === 0) {
                     // Streak 1 — Rekognition empty-frame is a strong, reliable signal
                     window._noFaceStreak = (window._noFaceStreak || 0) + 1;
@@ -4943,25 +4132,6 @@ function checkFrame() {
                         if (window._mouthOpenCount >= 2) { showVio('LIP_MOVEMENT'); window._mouthOpenCount = 0; }
                     } else {
                         window._mouthOpenCount = 0;
-=======
-                if (d.FaceDetails.length === 0) showVio('NO_FACE');
-                else if (d.FaceDetails.length > 1) showVio('MULTIPLE_FACES');
-                else {
-                    const face = d.FaceDetails[0];
-                    const p = face.Pose;
-                    // 25\u00c2\u00b0 threshold for looking away (aligned with 25% movement request)
-                    if (Math.abs(p.Yaw) > 25 || Math.abs(p.Pitch) > 25) {
-                        showVio('LOOKING_AWAY');
-                    }
-
-                    // Lip movement detection
-                    const mouth = face.MouthOpen;
-                    if (mouth && mouth.Value === true && mouth.Confidence > 85) {
-                        window._mouthOpenCount = (window._mouthOpenCount || 0) + 1;
-                        if (window._mouthOpenCount >= 3) { showVio('LIP_MOVEMENT'); window._mouthOpenCount = 0; }
-                    } else {
-                        window._mouthOpenCount = Math.max(0, (window._mouthOpenCount || 0) - 1);
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
                     }
                 }
             }
@@ -5046,7 +4216,6 @@ function showVio(m) {
         }
     }
 
-<<<<<<< HEAD
     // === AUTO-DISQUALIFY AT SCORE 100 ===
     const currentScore = calculateCheatingScore(violationLog);
     if (currentScore >= 100 && !isDisqualified) {
@@ -5075,26 +4244,6 @@ function showVio(m) {
         if (!window._lastHighRiskToast || Date.now() - window._lastHighRiskToast > 60000) {
             window._lastHighRiskToast = Date.now();
             toast(`🚨 Cheating score: ${currentScore}/100 - Recorded for admin`, true);
-=======
-    // === HIGH CHEATING SCORE WARNING (no auto-submit - admin sees everything at end) ===
-    const currentScore = calculateCheatingScore(violationLog);
-    if (currentScore > 65 && !window._highRiskWarned) {
-        window._highRiskWarned = true;
-        // Show a non-blocking warning - student can still continue and submit
-        toast(`\u00e2\u0161\u00a0\u00ef\u00b8\u008f High cheating score detected (${currentScore}/100). All violations are being recorded for admin review.`, true);
-        // Flash the overlay briefly but don't lock the exam
-        const vOverlay = document.getElementById('v-overlay');
-        if (vOverlay) {
-            vOverlay.style.display = 'flex';
-            document.getElementById('v-msg').innerText = `\u00e2\u0161\u00a0\u00ef\u00b8\u008f WARNING: High Risk Score (${currentScore}/100)\nAll violations recorded. Continue your exam.`;
-            setTimeout(() => { vOverlay.style.display = 'none'; }, 5000);
-        }
-    } else if (currentScore > 65) {
-        // Subsequent high-score violations - just toast, no overlay spam
-        if (!window._lastHighRiskToast || Date.now() - window._lastHighRiskToast > 60000) {
-            window._lastHighRiskToast = Date.now();
-            toast(`\u00f0\u0178\u0161\u00a8 Cheating score: ${currentScore}/100 - Recorded for admin`, true);
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
         }
     }
 }

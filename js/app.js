@@ -636,11 +636,7 @@ function toggleSettings(e) {
     if (cfg.severity) document.getElementById('set-severity').value = cfg.severity;
     if (cfg.reverify) document.getElementById('set-reverify').value = cfg.reverify;
     if (cfg.autodq) document.getElementById('set-autodq').value = cfg.autodq;
-<<<<<<< HEAD
     // About tab: storage size & DB info
-=======
-    // About tab: storage size
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     try {
         let bytes = 0;
         for (let k in localStorage) { if (localStorage.hasOwnProperty(k)) bytes += ((localStorage[k].length + k.length) * 2); }
@@ -649,15 +645,12 @@ function toggleSettings(e) {
         if (el) el.innerText = kb + ' KB used';
         const pkg = document.getElementById('about-version');
         if (pkg) pkg.innerText = 'Version 1.0.20';
-<<<<<<< HEAD
         const dbEl = document.getElementById('about-db');
         if (dbEl) {
             dbEl.innerText = USE_MOCK_AWS ? 'Mock (LocalStorage)' : 'Real Cloud (AWS us-east-1)';
             dbEl.style.color = USE_MOCK_AWS ? 'var(--text-muted)' : '#10b981';
             dbEl.style.fontWeight = USE_MOCK_AWS ? 'normal' : '700';
         }
-=======
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     } catch(e) {}
 }
 
@@ -2428,20 +2421,15 @@ async function publishAndPurgeProofs(eid) {
 
 // --- RESULTS & AI GRADING ---
 
-<<<<<<< HEAD
 // Global variables to track state
 let currentResultViewExamID = '';
 
 // Layer 1: Show all exams
-=======
-// Layer 1: Show all students who have results
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 async function loadResults() {
     document.getElementById('results-student-list').classList.remove('hidden');
     document.getElementById('results-history-view').classList.add('hidden');
     document.getElementById('results-detail-view').classList.add('hidden');
     const list = document.getElementById('results-student-list');
-<<<<<<< HEAD
     list.innerHTML = '<div style="color:#94a3b8; padding:20px; text-align:center;"><i class="fas fa-spinner fa-spin"></i> Loading exams...</div>';
     try {
         await dbGetAllExams();
@@ -2623,73 +2611,18 @@ async function showExamAttempts(examId) {
     } catch (e) {
         historyList.innerHTML = `<div style="color:#ef4444; padding:20px;">Error: ${e.message}</div>`;
     }
-=======
-    list.innerHTML = '<div style="color:#94a3b8; padding:20px; text-align:center;">Loading...</div>';
-    try {
-        const ids = await dbGetAllResultStudentIds();
-        await dbGetAllStudents();
-        list.innerHTML = '';
-        for (const sid of ids.filter(id => studentDB[id])) {
-            const attempts = await dbGetStudentResults(sid);
-            if (attempts.length > 0) {
-                list.innerHTML += `<div class="result-card" onclick="showStudentResults('${sid}')"><div><b>${escapeHtml(studentDB[sid].name)}</b><div style="font-size:12px;color:#64748b;">ID: ${sid}</div></div><div class="badge pass">${attempts.length} Attempt${attempts.length > 1 ? 's' : ''}</div></div>`;
-            }
-        }
-        if (list.innerHTML === '') list.innerHTML = '<div style="color:#94a3b8; text-align:center; padding:40px;">No exam results yet.</div>';
-    } catch (e) { list.innerHTML = `<div style="color:#ef4444; padding:20px;">Error: ${e.message}</div>`; }
-}
-
-// Layer 2: Show all exam attempts for a student
-async function showStudentResults(sid) {
-    currentResultViewID = sid;
-    document.getElementById('results-student-list').classList.add('hidden');
-    document.getElementById('results-history-view').classList.remove('hidden');
-    document.getElementById('results-detail-view').classList.add('hidden');
-    document.getElementById('history-student-name').innerText = (studentDB[sid]?.name || sid) + ' - Exam History';
-    const historyList = document.getElementById('exam-history-list');
-    historyList.innerHTML = '<div style="color:#94a3b8; padding:20px; text-align:center;">Loading...</div>';
-
-    const attempts = await dbGetStudentResults(sid);
-    if (attempts.length === 0) { historyList.innerHTML = '<div style="color:#94a3b8; padding:20px; text-align:center;">No exam attempts found.</div>'; return; }
-
-    historyList.innerHTML = '';
-    attempts.forEach((attempt) => {
-        const examTitle = attempt.examTitle || (examDB[attempt.examID] ? examDB[attempt.examID].title : 'Unknown Exam');
-        const qc = attempt.answers ? attempt.answers.length : 0;
-        const hasGrades = attempt.grades && attempt.grades.length > 0;
-        const totalScore = hasGrades ? attempt.grades.reduce((s, g) => s + (g || 0), 0) : null;
-        const maxScore = qc * 10;
-        const scoreBadge = hasGrades ? `<span class="badge ${totalScore > maxScore / 2 ? 'pass' : 'fail'}">${totalScore}/${maxScore}</span>` : '<span class="badge" style="background:#e5e7eb; color:#6b7280;">Not Graded</span>';
-        const score = attempt.cheatingScore || 0;
-        const scoreColor = score <= 20 ? '#10b981' : score <= 50 ? '#f59e0b' : '#ef4444';
-        const scoreLabel = score <= 20 ? 'Low Risk' : score <= 50 ? 'Medium Risk' : 'HIGH RISK \u26a0';
-        const riskBadge = `<span style="padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700; background:${score <= 20 ? '#dcfce7' : score <= 50 ? '#fef9c3' : '#fee2e2'}; color:${scoreColor};">${score}/100 \u00b7 ${scoreLabel}</span>`;
-        const vioCount = (attempt.violations || []).length;
-        const vioLine = vioCount > 0 ? `<div style="font-size:11px; color:#ef4444; margin-top:3px;">\u26a0 ${vioCount} violation${vioCount > 1 ? 's' : ''} recorded</div>` : `<div style="font-size:11px; color:#10b981; margin-top:3px;">\u2705 No violations</div>`;
-
-        historyList.innerHTML += `<div class="result-card" style="cursor:default;"><div style="flex:1;"><div style="font-weight:600; margin-bottom:4px;">${examTitle}</div><div style="font-size:12px; color:#64748b;">${qc} questions</div>${vioLine}</div><div style="display:flex; align-items:center; gap:10px;">${riskBadge} ${scoreBadge}<button onclick="viewAttemptDetails('${sid}', '${attempt.attemptId}')" style="width:auto; padding:8px 16px; font-size:12px;"><i class="fas fa-eye"></i> View</button><button onclick="deleteAttempt('${sid}', '${attempt.attemptId}')" class="danger" style="width:auto; padding:8px 16px; font-size:12px;"><i class="fas fa-trash"></i> Delete</button></div></div>`;
-    });
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 }
 
 // Delete a specific exam attempt
 async function deleteAttempt(sid, attemptId) {
     const attempt = (resultsDB[sid] || []).find(a => a.attemptId === attemptId);
     if (!attempt || !confirm('Delete this attempt? Cannot be undone.')) return;
-<<<<<<< HEAD
     const examId = attempt.examID;
-=======
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     try {
         for (const v of (attempt.violations || [])) { if (v.screenshotKey) await s3DeleteObject(v.screenshotKey).catch(() => { }); }
         await dbDeleteResult(sid, attemptId);
         toast('Attempt deleted');
-<<<<<<< HEAD
         showExamAttempts(examId);
-=======
-        if (!resultsDB[sid] || resultsDB[sid].length === 0) loadResults();
-        else showStudentResults(sid);
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     } catch (e) { toast('Delete failed: ' + e.message, true); }
 }
 
@@ -2700,16 +2633,10 @@ function viewAttemptDetails(sid, attemptId) {
     document.getElementById('results-student-list').classList.add('hidden');
     document.getElementById('results-history-view').classList.add('hidden');
     document.getElementById('results-detail-view').classList.remove('hidden');
-<<<<<<< HEAD
     document.getElementById('res-student-name').innerText = cleanMojibake(studentDB[sid]?.name || sid);
     const attempt = (resultsDB[sid] || []).find(a => a.attemptId === attemptId);
     if (!attempt) { toast('Attempt not found', true); return; }
     currentResultViewExamID = attempt.examID;
-=======
-    document.getElementById('res-student-name').innerText = studentDB[sid]?.name || sid;
-    const attempt = (resultsDB[sid] || []).find(a => a.attemptId === attemptId);
-    if (!attempt) { toast('Attempt not found', true); return; }
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     const examTitle = attempt.examTitle || (examDB[attempt.examID] ? examDB[attempt.examID].title : 'Unknown Exam');
     document.getElementById('res-exam-title').innerText = examTitle;
 
@@ -2730,13 +2657,8 @@ function viewAttemptDetails(sid, attemptId) {
         const ad = ans.isCode ? `<pre style="background:#0A0F1A; color:#CDD6F4; padding:12px; border-radius:8px; overflow-x:auto; font-size:13px; margin:0; border:1px solid rgba(255,255,255,0.06);">${escapeHtml(ans.answer)}</pre>` : `<div style="background:rgba(255,255,255,0.03); padding:12px; border:1px solid rgba(255,255,255,0.07); border-radius:6px; font-size:14px; line-height:1.6; color:var(--text-secondary);">${escapeHtml(ans.answer) || '<em style="color:var(--text-muted);">No answer provided</em>'}</div>`;
         const timeStr = ans.timeSpentSeconds != null ? (ans.timeSpentSeconds < 60 ? `${ans.timeSpentSeconds}s` : `${Math.floor(ans.timeSpentSeconds / 60)}m ${ans.timeSpentSeconds % 60}s`) : 'N/A';
         const isFast = attempt.fastAnswerFlags && attempt.fastAnswerFlags.some(q => ans.question.startsWith(q.substring(0, 30)));
-<<<<<<< HEAD
         const timeBadge = `<span style="font-size:11px; padding:2px 8px; border-radius:4px; margin-left:8px; background:${isFast ? 'rgba(255,45,85,0.1)' : 'rgba(0,212,255,0.08)'}; color:${isFast ? '#FF2D55' : '#94A3B8'}; border:1px solid ${isFast ? 'rgba(255,45,85,0.3)' : 'rgba(0,212,255,0.15)'};">\u23F1 ${timeStr}${isFast ? ' \u26A1 FAST' : ''}</span>`;
         content.innerHTML += `<div class="answer-block" id="ans-block-${i}"><div style="font-weight:600; margin-bottom:8px; color:var(--text-primary); display:flex; align-items:center;"><span class="q-number-chip">${i + 1}</span>${escapeHtml(ans.question)}${timeBadge}</div>${ad}<div class="ai-feedback-box" id="ai-feed-${i}" style="${ef ? 'display:block;' : ''}">${ef ? `<b>Score: ${eg}/10</b><br>${ef}` : ''}</div><div style="display:flex; align-items:center; gap:10px; margin-top:12px; padding:10px; background:rgba(0,212,255,0.04); border-radius:8px; border:1px solid var(--border-accent);"><label style="font-size:13px; font-weight:600; color:var(--accent); white-space:nowrap; font-family:var(--font-mono);">SCORE:</label><input type="number" id="manual-score-${i}" min="0" max="10" step="0.5" value="${eg}" placeholder="0&ndash;10" style="width:80px; margin-bottom:0; text-align:center; font-weight:600;"><span style="font-size:13px; color:var(--text-muted);">/ 10</span></div></div>`;
-=======
-        const timeBadge = `<span style="font-size:11px; padding:2px 8px; border-radius:4px; margin-left:8px; background:${isFast ? 'rgba(255,45,85,0.1)' : 'rgba(0,212,255,0.08)'}; color:${isFast ? '#FF2D55' : '#94A3B8'}; border:1px solid ${isFast ? 'rgba(255,45,85,0.3)' : 'rgba(0,212,255,0.15)'};">\u00e2\u008f\u00b1 ${timeStr}${isFast ? ' \u00e2\u0161\u00a1 FAST' : ''}</span>`;
-        content.innerHTML += `<div class="answer-block" id="ans-block-${i}"><div style="font-weight:600; margin-bottom:8px; color:var(--text-primary); display:flex; align-items:center;"><span class="q-number-chip">${i + 1}</span>${escapeHtml(ans.question)}${timeBadge}</div>${ad}<div class="ai-feedback-box" id="ai-feed-${i}" style="${ef ? 'display:block;' : ''}">${ef ? `<b>Score: ${eg}/10</b><br>${ef}` : ''}</div><div style="display:flex; align-items:center; gap:10px; margin-top:12px; padding:10px; background:rgba(0,212,255,0.04); border-radius:8px; border:1px solid var(--border-accent);"><label style="font-size:13px; font-weight:600; color:var(--accent); white-space:nowrap; font-family:var(--font-mono);">SCORE:</label><input type="number" id="manual-score-${i}" min="0" max="10" step="0.5" value="${eg}" placeholder="0\u00e2\u20ac\u201c10" style="width:80px; margin-bottom:0; text-align:center; font-weight:600;"><span style="font-size:13px; color:var(--text-muted);">/ 10</span></div></div>`;
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
     });
 }
 
@@ -2855,11 +2777,7 @@ async function saveManualGrades() {
 
 // Navigation helpers
 function backToStudentList() { loadResults(); }
-<<<<<<< HEAD
 function backToHistory() { showExamAttempts(currentResultViewExamID); }
-=======
-function backToHistory() { showStudentResults(currentResultViewID); }
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 function backToResults() { loadResults(); }
 
 // HTML escaping utility

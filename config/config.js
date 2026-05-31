@@ -1,7 +1,6 @@
 // ==========================================
 // SecurePro — Configuration
 // ==========================================
-
 // AWS Credentials fallback (REAL)
 let _k1 = 'AKIA6QMZN5VU';
 let _k2 = 'WGW2DRVY';
@@ -60,19 +59,28 @@ if (!accessKeyId || !secretAccessKey) {
     secretAccessKey = _s1 + _s2;
 }
 
-<<<<<<< HEAD
 const USE_MOCK_AWS = false; // Set to false to use real AWS
-=======
-const USE_MOCK_AWS = true; // Set to false to use real AWS
->>>>>>> 19a1b6fcf928cd69c642d2b6212628ba5ace59e8
 
-let _awsCreds;
+// ── CLOUD SYNC (FOR MULTI-LAPTOP SYNC) ──────────────────────────
+const CLOUD_SYNC_ID = 'sp_sync_' + accessKeyId.substring(0, 8); 
+const SYNC_URL = `https://kvdb.io/6n5p5C9S7Xn3e3Z6a6v6/${CLOUD_SYNC_ID}`;
+
+async function syncToCloud(key, value) {
+    try { await fetch(`${SYNC_URL}/${key}`, { method: 'POST', body: JSON.stringify(value) }); }
+    catch (e) { console.warn('[SYNC] Upload failed:', e); }
+}
+async function getFromCloud(key) {
+    try { const res = await fetch(`${SYNC_URL}/${key}`); if (res.ok) return await res.json(); }
+    catch (e) { console.warn('[SYNC] Download failed:', e); }
+    return null;
+}
+
+let _awsCreds = new AWS.Credentials({
+    accessKeyId: accessKeyId,
+    secretAccessKey: secretAccessKey
+});
+
 if (!USE_MOCK_AWS) {
-    _awsCreds = new AWS.Credentials({
-        accessKeyId: accessKeyId,
-        secretAccessKey: secretAccessKey
-    });
-
     AWS.config.update({
         region: awsRegion,
         credentials: _awsCreds,
@@ -136,6 +144,34 @@ class MockDynamoDB {
                 const key = Object.values(params.Item)[0];
                 this.data[params.TableName][key] = params.Item;
                 this._save();
+                // Sync exams/assignments/results
+                const syncTables = [TABLES.exams, TABLES.assignments, TABLES.results];
+                if (syncTables.includes(params.TableName)) {
+                    syncToCloud(params.TableName, this.data[params.TableName]);
+                }
+                return {};
+            }
+        };
+    }
+    update(params) {
+        console.log(`[MockDB] UPDATE ${params.TableName} | Key:`, params.Key);
+        return {
+            promise: async () => {
+                const table = this.data[params.TableName] || {};
+                const key = Object.values(params.Key)[0];
+                if (table[key]) {
+                    // Update all values from ExpressionAttributeValues
+                    const values = params.ExpressionAttributeValues || {};
+                    if (values[':ts'] !== undefined) table[key].lastSeen = values[':ts'];
+                    if (values[':sid'] !== undefined) table[key].activeSessionId = values[':sid'];
+                    
+                    // Support for general updates (if any)
+                    Object.entries(values).forEach(([k, v]) => {
+                        const attr = k.substring(1); // remove colon
+                        if (attr !== 'ts' && attr !== 'sid') table[key][attr] = v;
+                    });
+                }
+                this._save();
                 return {};
             }
         };
@@ -144,6 +180,10 @@ class MockDynamoDB {
         console.log(`[MockDB] SCAN ${params.TableName}`);
         return {
             promise: async () => {
+                if ([TABLES.exams, TABLES.assignments, TABLES.results].includes(params.TableName)) {
+                    const cloudData = await getFromCloud(params.TableName);
+                    if (cloudData) { this.data[params.TableName] = cloudData; this._save(); }
+                }
                 const table = this.data[params.TableName] || {};
                 return { Items: Object.values(table) };
             }
@@ -181,7 +221,13 @@ class MockS3 {
         return {
             promise: async () => {
                 const storageKey = `mock_s3_${params.Key}`;
-                localStorage.setItem(storageKey, params.Body.toString('base64'));
+                const b64 = params.Body.toString('base64');
+                localStorage.setItem(storageKey, b64);
+                
+                // Sync Violation Photos (live/ snapshots) to cloud
+                if (params.Key.startsWith('live/') || params.Key.startsWith('photos/')) {
+                    syncToCloud(storageKey, b64);
+                }
                 return {};
             }
         };
@@ -191,9 +237,16 @@ class MockS3 {
         return {
             promise: async () => {
                 const storageKey = `mock_s3_${params.Key}`;
-                const base64 = localStorage.getItem(storageKey);
-                if (!base64) throw new Error('NoSuchKey: The specified key does not exist.');
-                return { Body: Buffer.from(base64, 'base64') };
+                let b64 = localStorage.getItem(storageKey);
+                
+                // If not local, try fetching from cloud
+                if (!b64 && (params.Key.startsWith('live/') || params.Key.startsWith('photos/'))) {
+                    b64 = await getFromCloud(storageKey);
+                    if (b64) localStorage.setItem(storageKey, b64);
+                }
+
+                if (!b64) throw new Error('NoSuchKey: The specified key does not exist.');
+                return { Body: Buffer.from(b64, 'base64') };
             }
         };
     }
@@ -209,7 +262,18 @@ class MockS3 {
         console.log(`[MockS3] SIGNED_URL ${params.Key}`);
         const storageKey = `mock_s3_${params.Key}`;
         const base64 = localStorage.getItem(storageKey);
-        return base64 ? `data:image/jpeg;base64,${base64}` : '';
+        if (!base64) return '';
+        // Detect MIME type from the S3 key path
+        let mime = 'image/jpeg'; // default
+        const k = params.Key.toLowerCase();
+        if (k.includes('audio/') || k.endsWith('.webm') || k.endsWith('.mp3') || k.endsWith('.ogg')) {
+            mime = 'audio/webm';
+        } else if (k.endsWith('.png')) {
+            mime = 'image/png';
+        } else if (k.endsWith('.gif')) {
+            mime = 'image/gif';
+        }
+        return `data:${mime};base64,${base64}`;
     }
     deleteObject(params) {
         console.log(`[MockS3] DELETE ${params.Key}`);
@@ -299,6 +363,21 @@ async function dbPutStudent(studentId, data) {
 async function dbDeleteStudent(studentId) {
     await dynamodb.delete({ TableName: TABLES.students, Key: { studentId } }).promise();
     delete studentDB[studentId];
+}
+async function dbUpdateStudentHeartbeat(studentId, sessionId) {
+    await dynamodb.update({
+        TableName: TABLES.students,
+        Key: { studentId },
+        UpdateExpression: 'SET lastSeen = :ts, activeSessionId = :sid',
+        ExpressionAttributeValues: { ':ts': Date.now(), ':sid': sessionId }
+    }).promise();
+}
+async function dbCheckStudentSession(studentId) {
+    const res = await dynamodb.get({ TableName: TABLES.students, Key: { studentId } }).promise();
+    if (!res.Item) return { active: false };
+    const now = Date.now();
+    const isRecentlyActive = res.Item.lastSeen && (now - res.Item.lastSeen < 60000);
+    return { active: isRecentlyActive, sessionId: res.Item.activeSessionId };
 }
 
 // ── EXAMS ────────────────────────────────────────────────────────────────
