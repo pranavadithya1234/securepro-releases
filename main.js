@@ -68,9 +68,10 @@ function ensureAdminOnWindows() {
 // ── AUTO-UPDATER CONFIGURATION ───────────────────────────────────────────────
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
+autoUpdater.logger = null; // Suppress verbose logging
 
 function setupAutoUpdater() {
-  try { autoUpdater.checkForUpdates(); } catch (e) { /* running in dev mode */ }
+  try { autoUpdater.checkForUpdates(); } catch (e) { /* running in dev mode or no release */ }
 
   autoUpdater.on('update-available', (info) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -78,7 +79,8 @@ function setupAutoUpdater() {
     }
   });
   autoUpdater.on('update-not-available', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update-not-available');
+    // Silently ignore — no banner needed
+    console.log('[UPDATER] App is up to date.');
   });
   autoUpdater.on('download-progress', (progress) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -92,7 +94,17 @@ function setupAutoUpdater() {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update-downloaded', { version: info.version });
   });
   autoUpdater.on('error', (err) => {
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update-error', { message: err.message });
+    const msg = err.message || '';
+    // Silently swallow "no release" / network / 502 errors — they are expected in dev/staging
+    const isBenign = msg.includes('502') || msg.includes('Cannot parse releases feed') ||
+                     msg.includes('net::ERR') || msg.includes('ENOTFOUND') ||
+                     msg.includes('HttpError') || msg.includes('connect ETIMEDOUT');
+    if (isBenign) {
+      console.warn('[UPDATER] Skipped (no published release or network issue):', msg.substring(0, 120));
+      return;
+    }
+    // Only show banner for genuine update errors (e.g. corrupted download)
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update-error', { message: msg });
   });
 }
 
@@ -458,7 +470,7 @@ function createWindow() {
   mainWindow.webContents.on('did-finish-load', () => {
     checkDisplays();
     setInterval(checkDisplays, 30000);
-    setTimeout(() => setupAutoUpdater(), 5000);
+    setTimeout(() => setupAutoUpdater(), 10000); // Delay 10s so UI loads first
   });
   screen.on('display-added', checkDisplays);
   screen.on('display-removed', checkDisplays);

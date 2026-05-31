@@ -372,7 +372,15 @@ function formatBytes(bytes) {
 ipcRenderer.on('update-available', (e, data) => showUpdateBanner('available', data));
 ipcRenderer.on('update-download-progress', (e, data) => showUpdateBanner('downloading', data));
 ipcRenderer.on('update-downloaded', (e, data) => showUpdateBanner('ready', data));
-ipcRenderer.on('update-error', (e, data) => showUpdateBanner('error', data));
+ipcRenderer.on('update-error', (e, data) => {
+    // Only show banner for real errors (download corruption etc.), not 502/network issues
+    const msg = data.message || '';
+    const isBenign = msg.includes('502') || msg.includes('Cannot parse') ||
+                     msg.includes('ENOTFOUND') || msg.includes('net::ERR') ||
+                     msg.includes('ETIMEDOUT') || msg.includes('HttpError');
+    if (!isBenign) showUpdateBanner('error', data);
+    else console.warn('[UPDATE] Ignored benign error:', msg.substring(0, 80));
+});
 
 // === PHASE 1: NETWORK ANOMALY DETECTION ===
 async function checkNetworkIP() {
@@ -461,7 +469,7 @@ function populateWatermark() {
     if (!el) return;
     const name = studentDB[currentStudent]?.name || currentStudent;
     const ts = new Date().toLocaleString();
-    const text = `${currentStudent} \u00c2\u00b7 ${name} \u00c2\u00b7 ${ts}`;
+    const text = `${currentStudent} · ${name} · ${ts}`;
     el.innerHTML = Array(60).fill(`<span style="padding:20px 40px; font-size:11px; font-family:monospace; color:white; white-space:nowrap;">${escapeHtml(text)}</span>`).join('');
 }
 
@@ -491,7 +499,7 @@ async function logout() {
 // --- UI HELPERS ---
 function toast(msg, err = false) {
     const d = document.createElement('div'); d.className = 'toast';
-    d.innerHTML = `<span>${msg}</span>`;
+    d.innerHTML = `<span>${cleanMojibake(String(msg))}</span>`;
     if (err) d.style.borderLeftColor = '#ef4444';
     document.getElementById('toast-box').appendChild(d);
     setTimeout(() => d.remove(), 3000);
@@ -519,7 +527,7 @@ async function handleAdminLogin() {
         await Promise.all([dbGetAllStudents(), dbGetAllExams(), dbGetAllAssignments(), dbGetAllGroups()]);
         document.getElementById('auth-screen').classList.add('hidden');
         document.getElementById('admin-screen').style.display = 'flex';
-        nav('students');
+        nav('live');
     } catch (e) { toast('AWS Error: ' + e.message, true); console.error(e); }
     finally { btn.disabled = false; btn.innerText = 'Login'; }
 }
@@ -1099,7 +1107,8 @@ async function loadLiveExams() {
 
 function openExamMonitoring(examId, title) {
     currentMonitoringExamId = examId;
-    document.getElementById('monitoring-exam-title').innerText = title;
+    const titleEl = document.getElementById('live-exam-title') || document.getElementById('monitoring-exam-title');
+    if (titleEl) titleEl.innerText = title;
     document.getElementById('live-active-exams-wrap').classList.add('hidden');
     document.getElementById('live-monitoring-view').classList.remove('hidden');
     

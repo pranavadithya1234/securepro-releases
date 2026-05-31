@@ -2326,3 +2326,61 @@ th {
   font-weight: 600;
   cursor: pointer;
 }
+
+/* ============================================================
+   LIVE MONITOR SPLIT LAYOUT (new two-column monitoring view)
+   ============================================================ */
+.live-monitor-split {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  height: calc(100vh - 220px);
+  overflow: hidden;
+}
+
+.live-monitor-split .live-monitor-main {
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.live-monitor-split .session-detail-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow-y: auto;
+}
+
+/* Panel-live top-level padding fix */
+#panel-live .live-monitor-container {
+  padding: 0;
+}
+
+/* Analytics panel spacing */
+#panel-analytics .panel-header {
+  margin-bottom: 1.5rem;
+}
+
+/* Dark mode toast */
+body.dark-mode .toast {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+/* Ensure panel-live fills content area without double scroll */
+#panel-live {
+  height: 100%;
+  overflow: hidden;
+}
+
+#panel-live .live-monitor-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+#live-active-exams-wrap,
+#live-monitoring-view {
+  height: 100%;
+  overflow-y: auto;
+}
