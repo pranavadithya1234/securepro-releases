@@ -1,4 +1,4 @@
-﻿document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
     gsap.registerPlugin(ScrollTrigger);
 
     const enterBtn = document.getElementById('enter-btn');
@@ -270,5 +270,28 @@
             ease: 'power2.out'
         });
     });
+
+    // Fetch latest release info from GitHub API dynamically
+    async function fetchLatestRelease() {
+        try {
+            const response = await fetch('https://api.github.com/repos/pranavadithya1234/securepro-releases/releases/latest');
+            if (!response.ok) throw new Error('Failed to fetch release');
+            const data = await response.json();
+            
+            const version = data.tag_name;
+            const pubDate = new Date(data.published_at);
+            
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            const formattedDate = pubDate.toLocaleDateString('en-US', options);
+            
+            const dlMetaEl = document.getElementById('dl-meta');
+            if (dlMetaEl) {
+                dlMetaEl.innerHTML = `Version ${version.replace('v', '')} &nbsp;·&nbsp; Released ${formattedDate} &nbsp;·&nbsp; <a href="https://github.com/pranavadithya1234/securepro-releases/releases" target="_blank" style="color:var(--color-accent-2); text-decoration:none;">Changelog</a>`;
+            }
+        } catch (error) {
+            console.warn('Could not fetch latest release dynamically, using fallback version:', error);
+        }
+    }
+    fetchLatestRelease();
 });
 
