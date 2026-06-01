@@ -1,5 +1,6 @@
 [build]
-  publish = "website-deploy"   # Netlify deploys this folder
+  base = "website-deploy"
+  publish = "."
   command = "echo 'Static site — no build needed'"
 
 [build.environment]
