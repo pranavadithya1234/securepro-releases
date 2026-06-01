@@ -7,10 +7,14 @@
   "license": "ISC",
   "scripts": {
     "start": "electron .",
+    "prebuild": "node inject-secrets.js",
     "build": "electron-builder --win --publish never",
+    "prebuild:mac": "node inject-secrets.js",
     "build:mac": "electron-builder --mac dmg zip --publish never",
     "build:linux": "electron-builder --linux --publish never",
+    "prerelease:win": "node inject-secrets.js",
     "release:win": "electron-builder --win --publish always",
+    "prerelease:mac": "node inject-secrets.js",
     "release:mac": "electron-builder --mac dmg zip --publish always"
   },
   "build": {
