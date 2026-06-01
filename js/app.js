@@ -3629,13 +3629,37 @@ async function launchExam(eid, videoDeviceId, audioDeviceId) {
     examStartTime = Date.now();
     const b = document.getElementById('paper-content'); b.innerHTML = '';
 
+    const parseMcqOptions = (optsString) => {
+        if (!optsString) return [];
+        if (optsString.includes(',')) {
+            return optsString.split(',').map(o => o.trim()).filter(Boolean);
+        }
+        const choiceRegex = /\b([A-Ea-e](?:\)|\.|:))\s+/g;
+        const matches = [...optsString.matchAll(choiceRegex)];
+        if (matches.length > 0) {
+            const parts = [];
+            for (let idx = 0; idx < matches.length; idx++) {
+                const currentMatch = matches[idx];
+                const nextMatch = matches[idx + 1];
+                const start = currentMatch.index;
+                const end = nextMatch ? nextMatch.index : optsString.length;
+                parts.push(optsString.substring(start, end).trim());
+            }
+            return parts.filter(Boolean);
+        }
+        if (optsString.includes('\n')) {
+            return optsString.split(/\r?\n/).map(o => o.trim()).filter(Boolean);
+        }
+        return [optsString.trim()];
+    };
+
     // Feature 2: Shuffle questions
     const shuffledQuestions = shuffleArray(e.questions);
 
     shuffledQuestions.forEach((q, i) => {
         let h = '';
         if (q.type === 'mcq') {
-            const opts = shuffleArray(q.opts.split(',').map(o => o.trim()));
+            const opts = shuffleArray(parseMcqOptions(q.opts));
             h = opts.map(o => `<div class="mcq-option" onclick="this.querySelector('input').checked=true"><input type="radio" name="q_${i}" value="${escapeHtml(o)}"> <span>${escapeHtml(o)}</span></div>`).join('');
         }
         else if (q.type === 'long') h = `<textarea id="q_${i}" style="height:100px;" placeholder="Type your answer here..."></textarea>`;
