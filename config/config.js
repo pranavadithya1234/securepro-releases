@@ -1,28 +1,27 @@
 // ==========================================
 // SecurePro — Configuration
 // ==========================================
-// AWS Credentials fallback (REAL)
-let _k1 = 'AKIASN7NCS56';
-let _k2 = 'CXVKID5L';
-let _s1 = '0Q1Ugg2fsaWd86qPGmLy';
-let _s2 = '50eL47+Af6szmTT1BO9Q';
 
-let accessKeyId = '';
-let secretAccessKey = '';
-let awsRegion = 'us-east-1';
-let s3BucketName = 'securepro-assets-zxyw1y';
+let accessKeyId = process.env.AWS_ACCESS_KEY_ID || '';
+let secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || '';
+let awsRegion = process.env.AWS_REGION || 'us-east-1';
+let s3BucketName = process.env.AWS_S3_BUCKET || process.env.S3_BUCKET || 'securepro-assets-zxyw1y';
+
+let EMAILJS_PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY || '';
+let EMAILJS_SERVICE_ID = process.env.EMAILJS_SERVICE_ID || '';
+let EMAILJS_TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID || '';
+
+let GROQ_API_KEY = process.env.GROQ_API_KEY || '';
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+
+let SMTP_USER = process.env.SMTP_USER || '';
+let SMTP_PASS = process.env.SMTP_PASS || '';
 
 // Attempt to load from process.env (Node.js) or standard .env file
 try {
     const fs = require('fs');
     const path = require('path');
     
-    // Check environment variables first
-    accessKeyId = process.env.AWS_ACCESS_KEY_ID || '';
-    secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || '';
-    awsRegion = process.env.AWS_REGION || 'us-east-1';
-    s3BucketName = process.env.AWS_S3_BUCKET || process.env.S3_BUCKET || 'securepro-assets-zxyw1y';
-
     // Look for .env file in current directory or parent directory
     const envPaths = [
         path.join(__dirname, '.env'),
@@ -40,10 +39,20 @@ try {
                     let value = match[2] || '';
                     if (value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1);
                     if (value.startsWith("'") && value.endsWith("'")) value = value.slice(1, -1);
+                    
                     if (key === 'AWS_ACCESS_KEY_ID') accessKeyId = value;
                     if (key === 'AWS_SECRET_ACCESS_KEY') secretAccessKey = value;
                     if (key === 'AWS_REGION') awsRegion = value;
                     if (key === 'AWS_S3_BUCKET' || key === 'S3_BUCKET') s3BucketName = value;
+                    
+                    if (key === 'EMAILJS_PUBLIC_KEY') EMAILJS_PUBLIC_KEY = value;
+                    if (key === 'EMAILJS_SERVICE_ID') EMAILJS_SERVICE_ID = value;
+                    if (key === 'EMAILJS_TEMPLATE_ID') EMAILJS_TEMPLATE_ID = value;
+                    
+                    if (key === 'GROQ_API_KEY') GROQ_API_KEY = value;
+                    
+                    if (key === 'SMTP_USER') SMTP_USER = value;
+                    if (key === 'SMTP_PASS') SMTP_PASS = value;
                 }
             });
             break;
@@ -53,10 +62,9 @@ try {
     console.warn('[CONFIG] Failed to load dynamic .env configuration:', e);
 }
 
-// Fallback to hardcoded keys if not dynamically specified
+// Validate required environment configuration
 if (!accessKeyId || !secretAccessKey) {
-    accessKeyId = _k1 + _k2;
-    secretAccessKey = _s1 + _s2;
+    console.error('[SECURITY] CRITICAL: AWS Credentials are missing! Please check your environment variables or local .env file.');
 }
 
 const USE_MOCK_AWS = false; // Set to false to use real AWS
@@ -484,16 +492,5 @@ const NOISE_THRESHOLD = 35;
 // Stream tracker
 let currentStream = null;
 
-// ── EmailJS Configuration ──────────────────────────────────────
-const EMAILJS_PUBLIC_KEY = 'XNsJXCURrlJxFe09c';
-const EMAILJS_SERVICE_ID = 'service_n5mfd8m';
-const EMAILJS_TEMPLATE_ID = 'template_ilampb8';
-
 // Test bypass — student ID "s2" skips email and uses OTP "1234"
 const TEST_BYPASS_ID = 's2';
-
-// ── Groq AI Configuration ──────────────────────────────────────
-const _g1 = 'gsk_Z5W6rGzMwCJTW6G';
-const _g2 = '5LBbxWGdyb3FYndhszwjiZFQhQRbzp5vBRmsi';
-const GROQ_API_KEY = _g1 + _g2;
-const GROQ_MODEL = 'llama-3.3-70b-versatile';

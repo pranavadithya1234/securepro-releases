@@ -523,7 +523,7 @@ function topNav(section, el) {
 
 // ─── CLOSE ALL DROPDOWNS ──────────────────────────────────────────────────────
 function closeAllDropdowns() {
-    const ids = ['notif-dropdown', 'admin-dropdown'];
+    const ids = ['notif-dropdown', 'admin-dropdown', 'stu-notif-dropdown'];
     ids.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
 }
 
@@ -533,7 +533,72 @@ document.addEventListener('click', function(e) {
         document.getElementById('notif-dropdown') && (document.getElementById('notif-dropdown').style.display = 'none');
     if (!e.target.closest('.top-nav-user') && !e.target.closest('#admin-dropdown'))
         document.getElementById('admin-dropdown') && (document.getElementById('admin-dropdown').style.display = 'none');
+    if (!e.target.closest('#stu-bell-btn') && !e.target.closest('#stu-notif-dropdown'))
+        document.getElementById('stu-notif-dropdown') && (document.getElementById('stu-notif-dropdown').style.display = 'none');
 });
+
+// ─── STUDENT NOTIFICATIONS (Student Bell) ──────────────────────────────────────
+let _stuNotifStore = JSON.parse(localStorage.getItem('sp_student_notifications') || '[]');
+
+// Seed default notifications for student if empty
+if (_stuNotifStore.length === 0) {
+    _stuNotifStore = [
+        { icon: '🛡️', title: 'Welcome to SecurePro AI!', body: 'Active exam proctoring environment successfully loaded.', type: 'success', time: Date.now() - 3600000 },
+        { icon: '📝', title: 'Exams Assigned', body: 'Please verify your scheduled exams under the My Exams tab.', type: 'info', time: Date.now() - 7200000 }
+    ];
+    localStorage.setItem('sp_student_notifications', JSON.stringify(_stuNotifStore));
+}
+
+function addStudentNotification(icon, title, body, type = 'info') {
+    _stuNotifStore.unshift({ icon, title, body, type, time: Date.now() });
+    if (_stuNotifStore.length > 50) _stuNotifStore.pop();
+    localStorage.setItem('sp_student_notifications', JSON.stringify(_stuNotifStore));
+    const badge = document.getElementById('stu-notif-badge');
+    if (badge) badge.style.display = 'block';
+}
+
+function toggleStudentNotifications(e) {
+    e && e.stopPropagation();
+    const dd = document.getElementById('stu-notif-dropdown');
+    const isOpen = dd.style.display === 'block';
+    closeAllDropdowns();
+    if (!isOpen) {
+        renderStudentNotifications();
+        dd.style.display = 'block';
+        // Mark as read
+        const badge = document.getElementById('stu-notif-badge');
+        if (badge) badge.style.display = 'none';
+    }
+}
+
+function renderStudentNotifications() {
+    const list = document.getElementById('stu-notif-list');
+    if (!list) return;
+
+    if (_stuNotifStore.length === 0) {
+        list.innerHTML = '<div style="padding:30px; text-align:center; color:var(--text-muted); font-size:13px;"><i class="fas fa-check-circle" style="font-size:24px; display:block; margin-bottom:8px; color:#10b981;"></i>All clear — no notifications</div>';
+        return;
+    }
+
+    const colorMap = { warn: '#f59e0b', error: '#ef4444', info: 'var(--primary)', success: '#10b981' };
+    list.innerHTML = _stuNotifStore.map(n => `
+        <div style="padding:12px 18px; border-bottom:1px solid var(--border); display:flex; gap:12px; align-items:flex-start; transition:background 0.15s;" onmouseover="this.style.background='rgba(99,102,241,0.04)'" onmouseout="this.style.background=''">
+            <div style="font-size:18px; flex-shrink:0; margin-top:1px;">${n.icon || '🔔'}</div>
+            <div style="flex:1; min-width:0;">
+                <div style="font-weight:600; font-size:13px; color:var(--text-primary); margin-bottom:2px;">${escapeHtml(n.title)}</div>
+                <div style="font-size:12px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(n.body)}</div>
+                <div style="font-size:10px; color:${colorMap[n.type] || 'var(--text-muted)'}; margin-top:3px;">${timeAgo(n.time)}</div>
+            </div>
+        </div>`).join('');
+}
+
+function clearStudentNotifications() {
+    _stuNotifStore = [];
+    localStorage.setItem('sp_student_notifications', '[]');
+    renderStudentNotifications();
+    const badge = document.getElementById('stu-notif-badge');
+    if (badge) badge.style.display = 'none';
+}
 
 // ─── NOTIFICATIONS (Bell) ────────────────────────────────────────────────────
 let _notifStore = JSON.parse(localStorage.getItem('sp_notifications') || '[]');
@@ -913,8 +978,8 @@ SecurePro AI represents the future of secure digital assessments — delivering 
             const transporter = nodemailer.createTransport({
                 service: 'gmail',
                 auth: {
-                    user: 'securepro.kmit@gmail.com',
-                    pass: 'yyrupvoaegcadfvp'
+                    user: SMTP_USER || 'securepro.kmit@gmail.com',
+                    pass: SMTP_PASS
                 }
             });
 
@@ -1101,6 +1166,11 @@ async function verifyFace(id, stream, statusEl, btn) {
         document.getElementById('student-screen').style.display = 'block';
         document.getElementById('student-screen').classList.remove('hidden');
         loadMyExams();
+        
+        // Show student notification badge if notifications exist
+        const stuBadge = document.getElementById('stu-notif-badge');
+        if (stuBadge && _stuNotifStore.length > 0) stuBadge.style.display = 'block';
+        
         return;
     }
 
@@ -1130,7 +1200,11 @@ async function verifyFace(id, stream, statusEl, btn) {
     } catch (fetchErr) {
         stream.getTracks().forEach(t => t.stop());
         if (statusEl) statusEl.innerText = '\u274c Photo fetch failed';
-        toast("Could not retrieve registered photo. " + fetchErr.message, true);
+        let errMsg = fetchErr.message;
+        if (fetchErr.code === 'NoSuchKey') {
+            errMsg = "The registered photo is missing from the S3 bucket. Please register again via the Sign Up screen to upload your photo.";
+        }
+        toast("Could not retrieve registered photo. " + errMsg, true);
         if (btn) { btn.innerText = "Verify OTP"; btn.disabled = false; }
         return;
     }
@@ -1179,6 +1253,10 @@ async function verifyFace(id, stream, statusEl, btn) {
                     document.getElementById('student-screen').classList.remove('hidden');
                     loadMyExams();
                     
+                    // Show student notification badge if notifications exist
+                    const stuBadge = document.getElementById('stu-notif-badge');
+                    if (stuBadge && _stuNotifStore.length > 0) stuBadge.style.display = 'block';
+                    
                     // Live Sync: Automatically refresh exam list from cloud every 10 seconds
                     setInterval(() => {
                         if (currentStudent && document.getElementById('student-screen').offsetParent !== null) {
@@ -1202,6 +1280,11 @@ async function verifyFace(id, stream, statusEl, btn) {
                     document.getElementById('student-screen').style.display = 'block';
                     document.getElementById('student-screen').classList.remove('hidden');
                     loadMyExams();
+                    
+                    // Show student notification badge if notifications exist
+                    const stuBadge2 = document.getElementById('stu-notif-badge');
+                    if (stuBadge2 && _stuNotifStore.length > 0) stuBadge2.style.display = 'block';
+                    
                     return;
                 }
                 if (statusEl) statusEl.innerText = '\u274c Face not matched';
@@ -2108,8 +2191,8 @@ SecurePro AI represents the future of secure digital assessments — delivering 
             const transporter = nodemailer.createTransport({
                 service: 'gmail',
                 auth: {
-                    user: 'securepro.kmit@gmail.com',
-                    pass: 'yyrupvoaegcadfvp'
+                    user: SMTP_USER || 'securepro.kmit@gmail.com',
+                    pass: SMTP_PASS
                 }
             });
 
@@ -3575,7 +3658,7 @@ async function launchExam(eid, videoDeviceId, audioDeviceId) {
             </div>`;
         }
         b.innerHTML += `<div class="q-block" data-idx="${i}" data-type="${q.type}" data-text="${escapeHtml(q.text)}" data-lang="${q.lang || ''}">
-            <div style="display:flex; align-items:center; margin-bottom:12px;"><span class="q-number-chip">${i + 1}</span><span style="font-weight:600; color:var(--text-primary); font-size:15px;">${escapeHtml(q.text)}</span></div>${h}</div>`;
+            <div class="q-header"><span class="q-number-chip">${i + 1}</span><span class="q-text">${escapeHtml(q.text)}</span></div>${h}</div>`;
     });
 
     // Feature 4: AI Paste Detection on long-answer textareas
